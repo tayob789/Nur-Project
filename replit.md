@@ -1,96 +1,126 @@
-# Workspace
+# Nur — Islamic Lifestyle App
 
-## Overview
+## Project Overview
+A premium Islamic lifestyle mobile app built with Expo/React Native. Dark gold "Sacred Light" design system. Monorepo managed by pnpm.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## Architecture
+- **Monorepo root**: `/home/runner/workspace`
+- **API Server**: `artifacts/api-server` — Express backend (port 8080)
+- **Nur Mobile App**: `artifacts/nur` — Expo/React Native (Expo Go compatible)
+- **Mockup Sandbox**: `artifacts/mockup-sandbox` — Vite component preview
 
-## Stack
+## Design System
+- **Background**: `#0c0b09` (near black)
+- **Surface**: `#141210`, `#1c1914`, `#221f1a`
+- **Gold**: `#c9a84c` (primary accent)
+- **Teal**: `#3d8c7c` (secondary accent)
+- **Text**: `#ede8df`, `#9c9488`, `#5c5750`
+- **Amber**: `#d4870a` (warnings, missed prayers)
+- **Fonts**: DM Sans (UI), DM Serif Display (headings), Amiri (Arabic)
+- **Geometric SVG background** at ~7% opacity on every screen
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-
-## Structure
-
-```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+## Navigation Structure (Expo Router)
+```
+app/
+  _layout.tsx              — Root layout (fonts, providers)
+  (tabs)/
+    _layout.tsx            — 5-tab bar layout
+    index.tsx              — Home screen
+    prayers.tsx            — Daily Prayers
+    quran.tsx              — Quran Planner
+    dhikr.tsx              — Dhikr Counter
+    (more)/
+      _layout.tsx          — Stack navigator for More section
+      index.tsx            — More hub (feature grid)
+      qibla.tsx            — Qibla Compass
+      names.tsx            — 99 Names of Allah
+      calendar.tsx         — Islamic Calendar
+      zakat.tsx            — Zakat Calculator
 ```
 
-## TypeScript & Composite Projects
+## Features
+### Home Screen
+- Greeting with Hijri date
+- Next prayer card with live countdown (ticks every second), LinearGradient, gold glow
+- Prayer timeline (SVG horizontal arc showing all 5 prayers + current time)
+- Prayer strip (tap to mark done)
+- Goals cards: Prayers Today + Quran This Week
+- Streak tracker (7-day week dots)
+- Verse of the Day (Arabic RTL + English translation, rotates daily)
+- Hadith of the Day (authentic hadith, rotates daily)
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+### Prayers Screen
+- Prayer completion summary with progress ring
+- Full prayer list (tap to toggle done/undone)
+- Missed prayer indicator (amber, respectful)
+- Next prayer badge (gold)
+- Sunnah prayers section (collapsible)
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+### Quran Screen
+- Pages read stepper + weekly goal stepper
+- Khatm tracker with progress ring (604 pages = 1 khatm)
+- Milestones: pages/year, khatms completed
+- Progress bar
 
-## Root Scripts
+### Dhikr Screen
+- Counter for: SubhanAllah, Alhamdulillah, Allahu Akbar, Astaghfirullah, La ilaha illallah
+- Target progress bar (33/34/100)
+- Gold flash animation when target reached
+- Haptic feedback (expo-haptics, guarded for web)
+- Azkar collections: Morning, Evening, After Prayer, Before Sleep (full Arabic + transliteration + source)
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+### More Hub
+- Grid: Qibla, Calendar, 99 Names, Zakat
+- Fasting times (Sehri/Iftar from prayer times)
+- Privacy promise card
+
+### Qibla Screen
+- Location-based direction calculation to Mecca (21.4225°N, 39.8262°E)
+- SVG compass rose with animated gold needle
+- Distance to Mecca in km
+- Fallback to London coords on web
+
+### 99 Names of Allah
+- Searchable grid (2 columns) of all 99 names
+- Arabic + transliteration + meaning
+- Tap to expand full description modal
+
+### Islamic Calendar
+- Month calendar view (Gregorian)
+- Navigation arrows (month/year)
+- Hijri date display
+- Full list of Islamic events with descriptions
+
+### Zakat Calculator
+- Asset inputs: Cash, Gold, Investments, Business Stock, Liabilities
+- Nisab threshold (adjustable, default £5,950)
+- Zakat due at 2.5%
+- Charity suggestions: NZF, Islamic Relief, Human Appeal (suggestion-only, no affiliation)
+- Save calculation to AsyncStorage history
+
+## Key Files
+- `constants/colors.ts` — Full theme with gradients, shadows, colors
+- `data/verses.ts` — 30 Quranic verses
+- `data/hadith.ts` — 20 authentic hadith
+- `data/azkar.ts` — Full azkar collections (morning/evening/after prayer/sleep) + dhikr counter options
+- `data/namesOfAllah.ts` — All 99 Names of Allah with descriptions
+- `data/islamicEvents.ts` — 14 Islamic calendar events
+- `components/GeometricBackground.tsx` — SVG Islamic lattice pattern
+- `components/PrayerTimeline.tsx` — SVG horizontal day arc
+- `hooks/usePrayerTimes.ts` — Aladhan API integration
+- `hooks/useCountdown.ts` — Live second-by-second countdown
+- `hooks/useStreak.ts` — 7-day streak persistence
+- `hooks/useQuranGoal.ts` — Quran reading goal persistence
+
+## Important Rules
+- No emojis in UI — use @expo/vector-icons (Feather)
+- No gamification: streaks OK, no leaderboards/badges/points
+- No analytics, no third-party SDKs except future RevenueCat
+- All Arabic text: `writingDirection: 'rtl'` in StyleSheet
+- All hardcoded content must be authentic Islamic content
+- Web insets: 67px top, 34px bottom
+- Platform.OS !== 'web' guards on haptics, magnetometer
+- Expo Go compatible — no native-only packages
 
 ## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+Key dependencies: expo-linear-gradient, react-native-svg, expo-haptics, expo-sensors, react-native-reanimated, @expo-google-fonts/dm-serif-display, @expo-google-fonts/dm-sans, @expo-google-fonts/amiri, expo-location, @tanstack/react-query

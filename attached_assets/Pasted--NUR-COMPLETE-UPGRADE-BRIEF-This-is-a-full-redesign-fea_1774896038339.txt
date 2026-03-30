@@ -1,0 +1,855 @@
+# NUR — COMPLETE UPGRADE BRIEF
+# This is a full redesign + feature expansion prompt.
+# Paste this entire document into Replit AI. Do not summarise it.
+
+---
+
+## CONTEXT: WHAT EXISTS NOW
+
+The app currently has a working home screen with:
+- Greeting header with avatar
+- Next prayer card showing real prayer times
+- Prayer strip (5 pills)
+- Prayers Today + Quran This Week goal cards
+- 0 Day Streak section with day dots
+- Daily Reminder card
+- Bottom nav: Home, Prayers, Quran, Zakat
+
+This is a good foundation. Now we need to:
+1. Make the visual design dramatically more premium and futuristic
+2. Add all the core features that serious Islamic apps have
+3. Expand the navigation to 5 tabs + additional screens
+4. Make every screen feel intentional and polished
+
+---
+
+## PART 1 — VISUAL REDESIGN
+
+### The Problem With The Current Design
+The current UI looks like a clean dark app but lacks visual hierarchy, depth, and identity. It needs to feel like a £4/month premium product, not a free utility. Compare to apps like Nusuk, Gentler Streak, Headspace — premium apps that use space, typography, and light intentionally.
+
+### New Design Direction: "Sacred Light"
+The concept is that Nur (light) emanates from within the dark. Every screen should feel like you're looking at something glowing softly in darkness — not just dark backgrounds with text.
+
+#### Mandatory Visual Upgrades
+
+**1. Geometric Islamic Pattern Background**
+Every screen must have a very subtle geometric Islamic star/lattice pattern as the background texture.
+Use this SVG pattern repeated at ~3% opacity:
+```
+A 12-pointed star / arabesque lattice pattern
+Background: transparent
+Stroke: rgba(201,168,76,0.035)
+No fill
+Repeat: tile across full screen
+```
+Implement as a fixed position SVG layer behind all content using:
+```typescript
+// src/components/GeometricBackground.tsx
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import Svg, { Path, Defs, Pattern, Rect } from 'react-native-svg';
+
+export function GeometricBackground() {
+  return (
+    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
+        <Defs>
+          <Pattern id="geo" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+            <Path
+              d="M30 0 L34 10 L45 10 L36 16 L39 27 L30 21 L21 27 L24 16 L15 10 L26 10 Z"
+              stroke="rgba(201,168,76,0.06)"
+              strokeWidth="0.5"
+              fill="none"
+            />
+            <Path
+              d="M0 30 L10 26 L10 15 L16 24 L27 21 L21 30 L27 39 L16 36 L10 45 L10 34 Z"
+              stroke="rgba(201,168,76,0.04)"
+              strokeWidth="0.5"
+              fill="none"
+            />
+          </Pattern>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#geo)" />
+      </Svg>
+    </View>
+  );
+}
+```
+Install: `npx expo install react-native-svg`
+
+**2. Glowing Gold Accents**
+Key elements need a soft glow effect using layered shadows:
+```typescript
+// Gold glow shadow style — apply to next prayer card, active states
+goldGlow: {
+  shadowColor: '#c9a84c',
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.25,
+  shadowRadius: 20,
+  elevation: 8,
+}
+```
+
+**3. Gradient Cards**
+Replace flat surface2 backgrounds with subtle gradients on hero cards:
+```typescript
+// Use expo-linear-gradient for key cards
+import { LinearGradient } from 'expo-linear-gradient';
+// Install: npx expo install expo-linear-gradient
+
+// Next prayer card gradient:
+colors={['#1a1608', '#201c10', '#181612']}
+
+// Quran hero gradient:
+colors={['#160e06', '#1c1508', '#141210']}
+
+// Teal card gradient:
+colors={['#0e1612', '#121a15', '#141210']}
+```
+
+**4. Typography Hierarchy**
+```typescript
+// Must install these fonts:
+// npx expo install @expo-google-fonts/dm-serif-display @expo-google-fonts/dm-sans expo-font
+
+import { useFonts, DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
+import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold } from '@expo-google-fonts/dm-sans';
+
+// Usage:
+// All screen titles, prayer names, large numbers → DMSerifDisplay_400Regular
+// All body text, labels, buttons → DMSans
+```
+
+**5. Animated Countdown**
+The "Next Prayer" countdown must be a live ticking countdown, not static text:
+```typescript
+// Update every second using setInterval
+// Show as: "1h 24m 33s" → when < 10 min: show only "9m 42s" in gold
+// When < 5 min: pulse the entire next prayer card with a subtle gold border animation
+```
+
+**6. Moon Phase Indicator**
+Show current moon phase as a small crescent icon in the header area next to the Hijri date. Calculate using a simple moon phase algorithm.
+
+**7. Prayer Time Arc / Visual Clock**
+On the home screen, show a visual arc or circular timeline of the day showing where the current time sits relative to all 5 prayers. This is a key visual differentiator.
+
+```
+     Fajr ●────────────────────── Dhuhr ●──── NOW ──── Asr ●──────── Maghrib ●──── Isha ●
+```
+Show as a horizontal timeline with dots for each prayer, current time indicator, completed prayers in teal, upcoming in gold/dim.
+
+---
+
+## PART 2 — HOME SCREEN FULL REDESIGN
+
+Replace the current home screen with this structure:
+
+```
+┌─────────────────────────────────────┐
+│  [geometric pattern background]      │
+│                                      │
+│  ASSALAMU ALAIKUM          [Avatar]  │
+│  Muhammad                            │
+│  Mon 30 March · 1 Shawwal 1447  🌙  │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │  NEXT PRAYER          in 1h 24m  │ │  ← LinearGradient card, gold glow
+│ │  Isha              [Prepare now] │ │
+│ │  21:06                           │ │
+│ │  ●────●────●────●────────●       │ │  ← Prayer timeline arc
+│ └──────────────────────────────────┘ │
+│                                      │
+│  [Fajr] [Dhuhr] [Asr] [Maghrib] [Isha]  ← prayer strip
+│                                      │
+│ ┌────────────┐  ┌────────────────┐  │
+│ │ Prayers    │  │ Quran          │  │  ← 2-col goal cards
+│ │ 3/5 ████▒  │  │ 18/35 ████▒   │  │
+│ └────────────┘  └────────────────┘  │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │  ⚡ 7 Day Streak     M T W T F S S│ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │  Verse of the Day                │ │  ← NEW: Ayah card
+│ │  "And He is with you wherever    │ │
+│ │   you are..." [57:4]             │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │  Hadith of the Day               │ │  ← NEW: Hadith card
+│ └──────────────────────────────────┘ │
+│                                      │
+└─────────────────────────────────────┘
+```
+
+**Verse of the Day card:**
+- Rotating selection from a curated list of 30 short Quranic ayahs (hardcode initially)
+- Show Arabic text in large, beautiful Arabic font
+- English translation below
+- Surah:Ayah reference
+- Subtle gold border, teal-tinted background
+- Changes daily (use day of year % 30 as index)
+- Arabic font: use `@expo-google-fonts/amiri` or `@expo-google-fonts/scheherazade-new`
+
+**Hadith of the Day card:**
+- Rotating selection from 20 authentic short hadith (hardcode initially)
+- "The Prophet ﷺ said:" prefix in gold
+- Hadith text
+- Source (Bukhari, Muslim, etc.)
+- Changes daily
+
+---
+
+## PART 3 — NEW NAVIGATION STRUCTURE
+
+Change from 4 tabs to 5 tabs:
+
+```
+Home | Prayers | Quran | Dhikr | More
+ ⌂      ✦       ◈      ○○○     ···
+```
+
+The "More" tab opens a screen with access to:
+- Qibla compass
+- Islamic calendar
+- 99 Names of Allah
+- Zakat calculator
+- Settings
+
+This keeps the main nav clean while housing important features.
+
+---
+
+## PART 4 — ENHANCED PRAYERS SCREEN
+
+Current screen is good. Add these:
+
+**1. Sunnah prayers section**
+Below the 5 fard prayers, show collapsible section for Sunnah:
+- Tahajjud: 1/3 of night
+- Duha: after sunrise
+- 2 rakat before Fajr
+- 4 rakat before/after Dhuhr
+- etc.
+Show as a separate dimmer-styled list, collapsed by default.
+
+**2. Missed prayer indicator**
+If a prayer time has passed and it wasn't marked done, show a subtle amber warning indicator (not harsh red — respectful, not shaming).
+
+**3. Prayer times for the week**
+A horizontal date picker at the top showing Mon–Sun. Tap a day to see that day's prayer logs. This is critical for building the streak feature.
+
+**4. Qibla quick-access button**
+Small compass button in the top right of the Prayers screen. Tapping opens the Qibla screen.
+
+---
+
+## PART 5 — ENHANCED QURAN SCREEN
+
+Add these sections:
+
+**1. Surah tracker**
+A visual grid of all 114 Surahs (numbered boxes). User can tap to mark as "read" or "memorised". Store in AsyncStorage initially.
+```
+[1 Al-Fatiha ✓] [2 Al-Baqarah ...] [3 Al-Imran ...] ...
+```
+Colour code: read = teal, memorised = gold, unread = surface2
+
+**2. Reading streak calendar**
+A 7-week calendar grid (like GitHub contributions) showing which days the user read Quran. Each cell is a small coloured square. Gold = goal met, teal = partial, dim = nothing.
+
+**3. Khatm tracker**
+Show "You have completed X full Qurans (Khatms)" based on total pages logged.
+A small progress ring showing progress toward the next khatm (604 pages total).
+
+**4. Juz progress**
+Show 30 boxes representing the 30 Juz of the Quran. User can mark each Juz as complete.
+
+---
+
+## PART 6 — NEW DHIKR SCREEN (replaces standalone Zakat tab)
+
+This is one of the most-used features in every Islamic app. Build a proper Dhikr counter screen.
+
+```typescript
+// src/screens/DhikrScreen.tsx
+```
+
+**Layout:**
+```
+┌─────────────────────────────────────┐
+│  Dhikr Counter                       │
+│                                      │
+│  [SubhanAllah] [Alhamdulillah] [AllahuAkbar]  ← tab selector
+│                                      │
+│         ┌──────────────────┐         │
+│         │                  │         │
+│         │      1,247       │         │  ← Large counter, tap to increment
+│         │                  │         │
+│         │  SubhanAllah     │         │
+│         │  سبحان الله       │         │
+│         └──────────────────┘         │
+│                                      │
+│         [  +1  ]  [ Reset ]          │
+│                                      │
+│  Target: 33   ●●●●●●●●●●●●●●●●●●●  │  ← progress to 33
+│                                      │
+│  ──────── Azkar Collection ──────── │
+│                                      │
+│  Morning Azkar    (12 dhikr)    →   │
+│  Evening Azkar    (11 dhikr)    →   │
+│  After Prayer     (9 dhikr)     →   │
+│  Before Sleep     (7 dhikr)     →   │
+│                                      │
+└─────────────────────────────────────┘
+```
+
+**Counter features:**
+- Tap the large central area to increment (haptic feedback if available)
+- Three main counters: SubhanAllah (33), Alhamdulillah (33), Allahu Akbar (34)
+- Target is 33 (or user-set custom target)
+- When target reached: pulse animation, soft gold flash
+- Long press to set custom count target
+- Haptic feedback: `expo-haptics` — `Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)`
+- Total session count shown
+
+**Azkar collection:**
+Hardcode these collections with full content:
+```typescript
+const AZKAR_COLLECTIONS = {
+  morning: [
+    {
+      arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ',
+      transliteration: 'Asbahna wa asbahal mulku lillah',
+      translation: 'We have reached the morning and at this very time all sovereignty belongs to Allah',
+      count: 1,
+      source: 'Abu Dawud 5071'
+    },
+    // ... add 11 more
+  ],
+  evening: [ /* 11 azkar */ ],
+  afterPrayer: [ /* 9 azkar */ ],
+  beforeSleep: [ /* 7 azkar */ ],
+};
+```
+
+Install: `npx expo install expo-haptics`
+
+---
+
+## PART 7 — MORE SCREEN (hub for secondary features)
+
+```typescript
+// src/screens/MoreScreen.tsx
+```
+
+**Grid of feature cards:**
+
+```
+┌─────────────────────────────────────┐
+│  More                                │
+│                                      │
+│  ┌──────────┐  ┌──────────┐         │
+│  │  Qibla   │  │ Calendar │         │
+│  │ Compass  │  │ Islamic  │         │
+│  └──────────┘  └──────────┘         │
+│                                      │
+│  ┌──────────┐  ┌──────────┐         │
+│  │  99 Names│  │  Zakat   │         │
+│  │ of Allah │  │  Calc    │         │
+│  └──────────┘  └──────────┘         │
+│                                      │
+│  ┌──────────┐  ┌──────────┐         │
+│  │  Mosque  │  │ Settings │         │
+│  │  Finder  │  │          │         │
+│  └──────────┘  └──────────┘         │
+│                                      │
+│  ── Ramadan Mode ──────────────────  │  ← if Ramadan
+│  Sehri: 04:12    Iftar: 19:34        │
+│                                      │
+└─────────────────────────────────────┘
+```
+
+Each card navigates to its own screen (use Stack navigator nested inside the More tab).
+
+---
+
+## PART 8 — QIBLA COMPASS SCREEN
+
+```typescript
+// src/screens/QiblaScreen.tsx
+```
+
+**Implementation using device compass + location:**
+```typescript
+import { Magnetometer } from 'expo-sensors';
+import * as Location from 'expo-location';
+
+// Calculate Qibla direction from current coords to Mecca (21.4225° N, 39.8262° E)
+function calculateQiblaDirection(lat: number, lng: number): number {
+  const meccaLat = 21.4225 * (Math.PI / 180);
+  const meccaLng = 39.8262 * (Math.PI / 180);
+  const userLat = lat * (Math.PI / 180);
+  const userLng = lng * (Math.PI / 180);
+  
+  const dLng = meccaLng - userLng;
+  const x = Math.cos(meccaLat) * Math.sin(dLng);
+  const y = Math.cos(userLat) * Math.sin(meccaLat) - Math.sin(userLat) * Math.cos(meccaLat) * Math.cos(dLng);
+  
+  return ((Math.atan2(x, y) * (180 / Math.PI)) + 360) % 360;
+}
+
+// Subscribe to magnetometer for live compass heading
+Magnetometer.addListener(({ x, y }) => {
+  const heading = Math.atan2(y, x) * (180 / Math.PI);
+  // Rotate compass needle: qiblaDirection - heading
+});
+```
+
+Install: `npx expo install expo-sensors`
+
+**Visual design:**
+- Full screen dark background with geometric pattern
+- Large circular compass rose (draw with react-native-svg)
+- Gold Kaaba-pointing needle
+- Green north indicator
+- Compass degrees around the edge
+- Large "X° from North" label
+- Distance to Mecca in km
+- Instruction text: "Hold phone flat and away from metal"
+
+---
+
+## PART 9 — 99 NAMES OF ALLAH SCREEN
+
+```typescript
+// src/screens/NamesOfAllahScreen.tsx
+```
+
+**Layout:**
+- Search bar at top
+- Scrollable grid of cards (2 columns)
+- Each card shows:
+  - Number (01–99) in small gold
+  - Arabic name in large Arabic font
+  - Transliteration
+  - English meaning
+  - Tap to expand with full description
+
+**Hardcode all 99 names data:**
+```typescript
+export const NAMES_OF_ALLAH = [
+  {
+    number: 1,
+    arabic: 'الرَّحْمَنُ',
+    transliteration: 'Ar-Rahman',
+    meaning: 'The Most Gracious',
+    description: 'The one who acts with extreme kindness. His mercy encompasses all of creation.'
+  },
+  {
+    number: 2,
+    arabic: 'الرَّحِيمُ',
+    transliteration: 'Ar-Raheem',
+    meaning: 'The Most Merciful',
+    description: 'The one whose mercy is reserved especially for the believers.'
+  },
+  // ... all 99
+];
+```
+
+---
+
+## PART 10 — ISLAMIC CALENDAR SCREEN
+
+```typescript
+// src/screens/IslamicCalendarScreen.tsx
+```
+
+**Features:**
+- Monthly calendar view showing both Gregorian and Hijri dates
+- Highlighted Islamic events (hardcoded):
+  ```typescript
+  const ISLAMIC_EVENTS = [
+    { hijriMonth: 1, hijriDay: 1, name: "Islamic New Year" },
+    { hijriMonth: 1, hijriDay: 10, name: "Day of Ashura" },
+    { hijriMonth: 3, hijriDay: 12, name: "Mawlid an-Nabi ﷺ" },
+    { hijriMonth: 7, hijriDay: 27, name: "Isra & Mi'raj" },
+    { hijriMonth: 8, hijriDay: 15, name: "Shab-e-Barat" },
+    { hijriMonth: 9, hijriDay: 1, name: "Ramadan begins" },
+    { hijriMonth: 9, hijriDay: 27, name: "Laylatul Qadr (estimated)" },
+    { hijriMonth: 10, hijriDay: 1, name: "Eid al-Fitr" },
+    { hijriMonth: 12, hijriDay: 9, name: "Day of Arafah" },
+    { hijriMonth: 12, hijriDay: 10, name: "Eid al-Adha" },
+  ];
+  ```
+- Upcoming events list below calendar
+- Hijri date conversion using Aladhan API or local algorithm
+
+---
+
+## PART 11 — ENHANCED ZAKAT SCREEN
+
+Move Zakat to the More screen. Upgrade it with:
+
+**1. Nisab live price**
+Fetch current silver price to calculate live nisab:
+- Silver nisab = 595g of silver × current silver price per gram
+- API: `https://api.metalpriceapi.com/v1/latest?api_key=demo&base=GBP&currencies=XAG`
+- Or hardcode a manually-updated nisab value with "last updated" date
+
+**2. Asset categories with Islamic guidance**
+Each input field should have an info (ℹ) button that shows a brief note:
+- Cash: "Includes current accounts, savings, cash at home"
+- Gold: "Includes jewellery worn regularly — scholars differ on this"
+- Investments: "Include market value of stocks, ISA, pension (some scholars differ on pension)"
+- Business stock: "Goods held for sale at market value"
+- Liabilities: "Only immediate debts due within the year"
+
+**3. Donation suggestions**
+After calculating, show: "Your zakat is £213. Would you like to donate to:"
+- National Zakat Foundation (UK)
+- Islamic Relief
+- Human Appeal
+- [Hardcode these with website links]
+Note: These are suggestions only — no affiliate relationship or tracking.
+
+**4. Save history**
+"Save this calculation" button — stores to AsyncStorage with date.
+Previous calculations listed at bottom: "March 2025 — £213.00"
+
+---
+
+## PART 12 — COMPLETE FILE STRUCTURE TO BUILD
+
+```
+nur/
+├── App.tsx                          (updated: 5-tab nav + Stack for More)
+├── src/
+│   ├── theme/
+│   │   └── index.ts                 (updated: add gradient arrays, glow styles)
+│   ├── data/
+│   │   ├── verses.ts                (30 curated Quran verses)
+│   │   ├── hadith.ts                (20 curated hadith)
+│   │   ├── azkar.ts                 (morning/evening/after prayer/sleep azkar)
+│   │   ├── namesOfAllah.ts          (all 99 names with descriptions)
+│   │   ├── islamicEvents.ts         (annual Islamic calendar events)
+│   │   └── surahs.ts                (114 surah names + metadata)
+│   ├── components/
+│   │   ├── GeometricBackground.tsx  (SVG pattern layer)
+│   │   ├── GlowCard.tsx             (LinearGradient card with gold glow)
+│   │   ├── PrayerTimeline.tsx       (horizontal day arc showing prayer positions)
+│   │   ├── CountdownTimer.tsx       (live ticking countdown)
+│   │   ├── ProgressRing.tsx         (circular progress SVG)
+│   │   ├── AyahCard.tsx             (verse of the day)
+│   │   ├── HadithCard.tsx           (hadith of the day)
+│   │   ├── FeatureCard.tsx          (More screen grid cards)
+│   │   └── StreakCalendar.tsx       (7-week contribution grid)
+│   ├── screens/
+│   │   ├── HomeScreen.tsx           (full redesign)
+│   │   ├── PrayersScreen.tsx        (+ sunnah, week picker, missed indicator)
+│   │   ├── QuranScreen.tsx          (+ surah grid, juz tracker, khatm ring)
+│   │   ├── DhikrScreen.tsx          (NEW: counter + azkar collection)
+│   │   ├── MoreScreen.tsx           (NEW: feature hub grid)
+│   │   ├── QiblaScreen.tsx          (NEW: live compass)
+│   │   ├── NamesOfAllahScreen.tsx   (NEW: 99 names grid)
+│   │   ├── IslamicCalendarScreen.tsx(NEW: calendar + events)
+│   │   └── ZakatScreen.tsx          (enhanced: live nisab, charity links)
+│   ├── hooks/
+│   │   ├── usePrayerTimes.ts        (Aladhan API)
+│   │   ├── useCountdown.ts          (live seconds countdown)
+│   │   ├── useMoonPhase.ts          (lunar phase calculation)
+│   │   └── useQibla.ts              (magnetometer + location)
+│   └── lib/
+│       └── hijriCalendar.ts         (Hijri conversion utilities)
+```
+
+---
+
+## PART 13 — DATA FILES TO CREATE
+
+### src/data/verses.ts
+```typescript
+export const VERSES_OF_THE_DAY = [
+  {
+    arabic: 'وَهُوَ مَعَكُمْ أَيْنَ مَا كُنتُمْ',
+    translation: 'And He is with you wherever you are.',
+    reference: 'Al-Hadid 57:4',
+    transliteration: 'Wa huwa ma\'akum ayna ma kuntum'
+  },
+  {
+    arabic: 'إِنَّ مَعَ الْعُسْرِ يُسْرًا',
+    translation: 'Indeed, with hardship will be ease.',
+    reference: 'Ash-Sharh 94:6',
+    transliteration: 'Inna ma\'al \'usri yusra'
+  },
+  {
+    arabic: 'وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا',
+    translation: 'And whoever fears Allah — He will make for him a way out.',
+    reference: 'At-Talaq 65:2',
+    transliteration: 'Wa man yattaqillaha yaj\'al lahu makhrajaa'
+  },
+  {
+    arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ',
+    translation: 'Allah is sufficient for us, and He is the best Disposer of affairs.',
+    reference: 'Al-Imran 3:173',
+    transliteration: 'Hasbunallahu wa ni\'mal wakeel'
+  },
+  {
+    arabic: 'وَلَذِكْرُ اللَّهِ أَكْبَرُ',
+    translation: 'And the remembrance of Allah is greatest.',
+    reference: 'Al-Ankabut 29:45',
+    transliteration: 'Wa ladhikrullahi akbar'
+  },
+  // Add 25 more in this format
+];
+```
+
+### src/data/hadith.ts
+```typescript
+export const HADITH_OF_THE_DAY = [
+  {
+    text: 'The most beloved deeds to Allah are those done regularly, even if they are small.',
+    source: 'Sahih Bukhari 6465',
+    narrator: 'Aisha (RA)'
+  },
+  {
+    text: 'None of you truly believes until he loves for his brother what he loves for himself.',
+    source: 'Sahih Bukhari 13',
+    narrator: 'Anas ibn Malik (RA)'
+  },
+  {
+    text: 'Speak good or remain silent.',
+    source: 'Sahih Bukhari 6018',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  {
+    text: 'Make things easy and do not make them difficult, cheer people up and do not put them off.',
+    source: 'Sahih Bukhari 69',
+    narrator: 'Anas ibn Malik (RA)'
+  },
+  {
+    text: 'The strong man is not the one who can overpower others. The strong man is the one who controls himself when he is angry.',
+    source: 'Sahih Bukhari 6114',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  // Add 15 more
+];
+```
+
+---
+
+## PART 14 — KEY COMPONENT SPECS
+
+### PrayerTimeline component
+```typescript
+// Shows 5 prayer dots on a horizontal line with current time marker
+// Props: prayers (with times), currentTime
+// Visual: ●──────●──────●──────NOW──●──────●
+// Done prayers: teal dot, upcoming: dim, next: gold pulse
+
+interface PrayerTimelineProps {
+  prayers: Prayer[];
+  currentTime: Date;
+}
+
+// Calculate position of each prayer as % of full day (0-100)
+// Calculate current time position
+// Render with react-native-svg as a horizontal line with dots
+```
+
+### CountdownTimer component
+```typescript
+// Live countdown that ticks every second
+// Shows: "1h 24m 33s" or "24m 33s" or "33s"
+// When < 5 min: text turns gold, size increases slightly
+// When < 1 min: text pulses
+
+import { useEffect, useState } from 'react';
+
+export function useCountdown(targetTime: string): string {
+  const [countdown, setCountdown] = useState('');
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const [h, m] = targetTime.split(':').map(Number);
+      const target = new Date();
+      target.setHours(h, m, 0, 0);
+      
+      if (target < now) target.setDate(target.getDate() + 1);
+      
+      const diff = Math.floor((target.getTime() - now.getTime()) / 1000);
+      const hours = Math.floor(diff / 3600);
+      const mins = Math.floor((diff % 3600) / 60);
+      const secs = diff % 60;
+      
+      if (hours > 0) setCountdown(`${hours}h ${mins}m ${secs}s`);
+      else if (mins > 0) setCountdown(`${mins}m ${secs}s`);
+      else setCountdown(`${secs}s`);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [targetTime]);
+  
+  return countdown;
+}
+```
+
+### DhikrCounter component
+```typescript
+// Big tappable counter with haptic feedback
+// Animates scale on tap: 0.95 → 1.0 spring
+// Gold flash when target reached
+
+import * as Haptics from 'expo-haptics';
+import Animated, { useSharedValue, withSpring } from 'react-native-reanimated';
+
+// Install: npx expo install react-native-reanimated expo-haptics
+```
+
+---
+
+## PART 15 — UPDATED COLOUR SYSTEM
+
+Add these to src/theme/index.ts:
+
+```typescript
+export const theme = {
+  colors: {
+    // Existing
+    bg: '#0c0b09',
+    surface: '#141210',
+    surface2: '#1c1914',
+    surface3: '#221f1a',
+    border: 'rgba(255,255,255,0.07)',
+    border2: 'rgba(255,255,255,0.12)',
+    gold: '#c9a84c',
+    goldLight: '#e8c97a',
+    goldDim: 'rgba(201,168,76,0.15)',
+    teal: '#3d8c7c',
+    tealLight: '#5ab5a2',
+    tealDim: 'rgba(61,140,124,0.15)',
+    text: '#ede8df',
+    text2: '#9c9488',
+    text3: '#5c5750',
+    // NEW
+    amber: '#d4870a',
+    amberDim: 'rgba(212,135,10,0.15)',
+    error: '#8b3a4a',
+    white06: 'rgba(255,255,255,0.06)',
+    white10: 'rgba(255,255,255,0.10)',
+  },
+  gradients: {
+    nextPrayer: ['#1a1608', '#201c10', '#181612'] as const,
+    quranHero: ['#160e06', '#1c1508', '#141210'] as const,
+    zakatHeader: ['#0e1612', '#121a15', '#141210'] as const,
+    dhikrCard: ['#0e0f16', '#131420', '#141210'] as const,
+  },
+  shadows: {
+    goldGlow: {
+      shadowColor: '#c9a84c',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      elevation: 6,
+    },
+    tealGlow: {
+      shadowColor: '#3d8c7c',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+  },
+};
+```
+
+---
+
+## PART 16 — ALL PACKAGES TO INSTALL
+
+Run this single command in PowerShell (single line, no backslashes):
+
+```powershell
+npx expo install expo-linear-gradient react-native-svg expo-haptics expo-sensors react-native-reanimated @expo-google-fonts/dm-serif-display @expo-google-fonts/dm-sans @expo-google-fonts/amiri expo-font
+```
+
+Then add to babel.config.js:
+```javascript
+module.exports = function(api) {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: ['react-native-reanimated/plugin'],
+  };
+};
+```
+
+---
+
+## PART 17 — PRIORITY BUILD ORDER
+
+Build in this exact order. Confirm each works before moving on:
+
+1. **Install all packages** (single PowerShell command above)
+2. **Update theme** with gradients, shadows, new colours
+3. **Create GeometricBackground component** — test it shows on HomeScreen
+4. **Create GlowCard component** with LinearGradient
+5. **Rebuild HomeScreen** with all new sections (verses, hadith, timeline)
+6. **Build CountdownTimer hook** — test live ticking on HomeScreen
+7. **Build DhikrScreen** — counter + azkar list
+8. **Build MoreScreen** — feature grid
+9. **Build QiblaScreen** — compass + calculation
+10. **Build NamesOfAllahScreen** — full 99 names
+11. **Build IslamicCalendarScreen** — calendar + events
+12. **Enhance PrayersScreen** — week picker, sunnah, missed indicator
+13. **Enhance QuranScreen** — surah grid, juz tracker, khatm ring
+14. **Enhance ZakatScreen** — charity links, save history
+
+---
+
+## PART 18 — FUTURISTIC DESIGN PRINCIPLES
+
+Every design decision should ask: "Does this feel like a £4/month premium Islamic app or a free utility?"
+
+**Premium signals to include:**
+- Smooth spring animations on every state change (react-native-reanimated)
+- Haptic feedback on all interactive elements
+- Gold glows on active/hero elements
+- Geometric Islamic pattern everywhere at low opacity
+- Arabic calligraphy-style text for key religious content
+- Micro-animations: prayer marked done → teal sweep animation
+- Counter increment → brief scale pulse
+- Screen transitions → fade, not slide
+- Loading states → gold shimmer skeleton, not spinner
+
+**Things that make apps feel cheap — avoid all of these:**
+- Static/flat prayer rows with no visual feedback
+- Generic white loading spinners
+- Harsh red error states
+- System default fonts anywhere
+- Solid flat backgrounds (use subtle gradients)
+- Missing haptics on interactive elements
+- Inconsistent border radius
+- Full-width flat buttons (use rounded, gold, with slight glow)
+
+---
+
+## IMPORTANT NOTES
+
+- Windows PowerShell — all commands must be single-line, no backslash continuation
+- Testing on Android via Expo Go
+- Do not add the "Made with Replit" banner — this is a real product
+- All Arabic text must render right-to-left: `writingDirection: 'rtl'` in StyleSheet
+- All hardcoded content (verses, hadith, azkar) must be authentic — no invented Islamic content
+- Never gamify worship (no points, levels, badges for prayer — streaks are fine, leaderboards are not)
+- The app's privacy positioning is central: no analytics tracking, no third-party SDKs except RevenueCat (for future payments)
+
+---
+
+## START HERE
+
+Begin with steps 1–4 (packages, theme, GeometricBackground, GlowCard). Show me the complete code for each file you create or modify. Do not show summaries — show full file contents. After each step confirm it's working before proceeding.

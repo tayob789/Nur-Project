@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { GeometricBackground } from '@/components/GeometricBackground';
 import { theme } from '@/constants/colors';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 
@@ -24,9 +25,19 @@ const MESSAGES = [
   'All prayers complete. May Allah accept.',
 ];
 
+const SUNNAH = [
+  { name: '2 rakat', label: 'Before Fajr', note: 'Sunnah Muakkadah' },
+  { name: '4 rakat', label: 'Before Dhuhr', note: 'Sunnah Muakkadah' },
+  { name: '2 rakat', label: 'After Dhuhr', note: 'Sunnah Muakkadah' },
+  { name: '2 rakat', label: 'After Maghrib', note: 'Sunnah Muakkadah' },
+  { name: '2 rakat', label: 'After Isha', note: 'Sunnah Muakkadah' },
+  { name: 'Witr', label: 'After Isha (night)', note: 'Sunnah Muakkadah' },
+];
+
 export default function PrayersScreen() {
   const insets = useSafeAreaInsets();
   const { prayers, nextPrayer, loading, error, hijriDate, togglePrayer } = usePrayerTimes();
+  const [sunnahExpanded, setSunnahExpanded] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -34,90 +45,103 @@ export default function PrayersScreen() {
   }, []);
 
   const done = prayers.filter((p) => p.done).length;
-  const progress = prayers.length > 0 ? done / prayers.length : 0;
+  const ringPct = prayers.length > 0 ? done / prayers.length : 0;
   const ringColor = done === 5 ? theme.colors.teal : theme.colors.gold;
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  function isMissed(timeStr: string, isDone: boolean) {
+    if (isDone) return false;
+    const [h, m] = timeStr.split(':').map(Number);
+    const pMins = h * 60 + m;
+    return pMins < nowMins;
+  }
 
   return (
     <View style={s.root}>
       <StatusBar barStyle="light-content" />
+      <GeometricBackground />
       <ScrollView
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Header */}
           <View style={s.header}>
             <Text style={s.eyebrow}>{hijriDate || 'DAILY SALAH'}</Text>
             <Text style={s.title}>Daily Prayers</Text>
           </View>
 
-          {/* Summary Ring */}
           <View style={s.summaryCard}>
-            <View style={s.ringOuter}>
-              <View style={[s.ringInner, { borderColor: ringColor }]}>
-                <Text style={[s.ringNumber, { color: ringColor }]}>{done}</Text>
-                <Text style={s.ringLabel}>of 5</Text>
-              </View>
+            <View style={[s.ring, { borderColor: ringColor }]}>
+              <Text style={[s.ringNum, { color: ringColor }]}>{done}</Text>
+              <Text style={s.ringOf}>of 5</Text>
             </View>
             <View style={s.summaryText}>
-              <Text style={s.summaryMessage}>{MESSAGES[done]}</Text>
-              {done < 5 && (
-                <Text style={s.summaryRemaining}>{5 - done} prayer{5 - done !== 1 ? 's' : ''} remaining</Text>
-              )}
+              <Text style={s.summaryMsg}>{MESSAGES[done]}</Text>
+              {done < 5 && <Text style={s.summaryRemain}>{5 - done} remaining</Text>}
             </View>
           </View>
 
-          {loading && (
-            <View style={s.loadingContainer}>
-              <Text style={s.loadingText}>Loading prayer times…</Text>
-            </View>
-          )}
-          {error && (
-            <View style={s.errorContainer}>
-              <Text style={s.errorText}>{error}</Text>
-            </View>
-          )}
+          {loading && <View style={s.loadBox}><Text style={s.loadTxt}>Loading prayer times…</Text></View>}
+          {error && <View style={s.errBox}><Text style={s.errTxt}>{error}</Text></View>}
 
-          {/* Prayer List */}
           {prayers.map((prayer, i) => {
             const isNext = nextPrayer?.name === prayer.name && !prayer.done;
+            const missed = isMissed(prayer.time, prayer.done);
             return (
               <TouchableOpacity
                 key={prayer.name}
                 activeOpacity={0.7}
                 onPress={() => togglePrayer(i)}
                 style={[
-                  s.prayerRow,
-                  prayer.done && s.prayerRowDone,
-                  isNext && s.prayerRowNext,
+                  s.row,
+                  prayer.done && s.rowDone,
+                  isNext && s.rowNext,
+                  missed && s.rowMissed,
                 ]}
               >
-                <View style={[s.leftBorder, { backgroundColor: prayer.done ? theme.colors.teal : isNext ? theme.colors.gold : 'transparent' }]} />
-                <View style={[s.checkbox, prayer.done && s.checkboxDone]}>
-                  {prayer.done && <Feather name="check" size={14} color={theme.colors.bg} />}
+                <View style={[s.leftBar, {
+                  backgroundColor: prayer.done ? theme.colors.teal : isNext ? theme.colors.gold : missed ? theme.colors.amber : 'transparent'
+                }]} />
+                <View style={[s.cb, prayer.done && s.cbDone, missed && !prayer.done && s.cbMissed]}>
+                  {prayer.done && <Feather name="check" size={13} color={theme.colors.bg} />}
+                  {missed && !prayer.done && <Feather name="clock" size={11} color={theme.colors.amber} />}
                 </View>
                 <View style={s.prayerInfo}>
-                  <View style={s.prayerNameRow}>
-                    <Text style={[s.prayerName, prayer.done && s.prayerNameDone, isNext && s.prayerNameNext]}>
-                      {prayer.name}
-                    </Text>
-                    <Text style={s.arabicName}>{prayer.arabic}</Text>
+                  <View style={s.nameRow}>
+                    <Text style={[s.pName, prayer.done && s.pNameDone, isNext && s.pNameNext]}>{prayer.name}</Text>
+                    <Text style={s.pArabic}>{prayer.arabic}</Text>
                   </View>
-                  <Text style={s.prayerTime}>{prayer.time}</Text>
+                  <Text style={s.pTime}>{prayer.time}</Text>
                 </View>
-                {isNext && (
-                  <View style={s.nextBadge}>
-                    <Text style={s.nextBadgeText}>Next</Text>
-                  </View>
-                )}
-                {prayer.done && (
-                  <Feather name="check-circle" size={18} color={theme.colors.teal} />
-                )}
+                {isNext && <View style={s.nextBadge}><Text style={s.nextBadgeTxt}>Next</Text></View>}
+                {missed && !prayer.done && <View style={s.missedBadge}><Text style={s.missedBadgeTxt}>Missed</Text></View>}
+                {prayer.done && <Feather name="check-circle" size={18} color={theme.colors.teal} />}
               </TouchableOpacity>
             );
           })}
+
+          {/* Sunnah Section */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setSunnahExpanded(!sunnahExpanded)}
+            style={s.sunnahHeader}
+          >
+            <Text style={s.sunnahTitle}>Sunnah Prayers</Text>
+            <Feather name={sunnahExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={theme.colors.text2} />
+          </TouchableOpacity>
+          {sunnahExpanded && SUNNAH.map((sunnah, i) => (
+            <View key={i} style={s.sunnahRow}>
+              <View style={s.sunnahLeft}>
+                <Text style={s.sunnahName}>{sunnah.name}</Text>
+                <Text style={s.sunnahLabel}>{sunnah.label}</Text>
+              </View>
+              <Text style={s.sunnahNote}>{sunnah.note}</Text>
+            </View>
+          ))}
         </Animated.View>
       </ScrollView>
     </View>
@@ -127,35 +151,45 @@ export default function PrayersScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.bg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 20 },
-  header: { marginBottom: 24 },
-  eyebrow: { fontSize: 11, letterSpacing: 2, color: theme.colors.gold, fontWeight: '600', marginBottom: 6 },
-  title: { fontSize: 28, fontWeight: '700', color: theme.colors.text },
-  summaryCard: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 24, marginBottom: 24, borderWidth: 1, borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', gap: 20 },
-  ringOuter: { width: 80, height: 80, borderRadius: 40, backgroundColor: theme.colors.surface2, justifyContent: 'center', alignItems: 'center' },
-  ringInner: { width: 68, height: 68, borderRadius: 34, borderWidth: 3, justifyContent: 'center', alignItems: 'center' },
-  ringNumber: { fontSize: 24, fontWeight: '800' },
-  ringLabel: { fontSize: 11, color: theme.colors.text3, fontWeight: '500' },
+  content: { paddingHorizontal: 18 },
+  header: { marginBottom: 20 },
+  eyebrow: { fontSize: 10, letterSpacing: 2, color: theme.colors.gold, fontWeight: '600', marginBottom: 6 },
+  title: { fontSize: 26, fontWeight: '700', color: theme.colors.text },
+  summaryCard: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', gap: 18 },
+  ring: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface2 },
+  ringNum: { fontSize: 22, fontWeight: '800' },
+  ringOf: { fontSize: 10, color: theme.colors.text3, fontWeight: '500' },
   summaryText: { flex: 1 },
-  summaryMessage: { fontSize: 15, fontWeight: '600', color: theme.colors.text, lineHeight: 22, marginBottom: 4 },
-  summaryRemaining: { fontSize: 13, color: theme.colors.text2 },
-  loadingContainer: { padding: 20, alignItems: 'center' },
-  loadingText: { color: theme.colors.text2 },
-  errorContainer: { backgroundColor: 'rgba(255,100,100,0.1)', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,100,100,0.3)' },
-  errorText: { color: '#ff6464', fontSize: 14 },
-  prayerRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 14, marginBottom: 10, paddingRight: 16, paddingVertical: 16, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden', gap: 12 },
-  prayerRowDone: { backgroundColor: theme.colors.tealDim, borderColor: `rgba(61,140,124,0.3)` },
-  prayerRowNext: { borderColor: `rgba(201,168,76,0.4)`, backgroundColor: theme.colors.goldDim },
-  leftBorder: { width: 3, height: '100%', position: 'absolute', left: 0, top: 0, bottom: 0 },
-  checkbox: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border2, justifyContent: 'center', alignItems: 'center', marginLeft: 16 },
-  checkboxDone: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
+  summaryMsg: { fontSize: 14, fontWeight: '600', color: theme.colors.text, lineHeight: 20, marginBottom: 4 },
+  summaryRemain: { fontSize: 12, color: theme.colors.text2 },
+  loadBox: { padding: 20, alignItems: 'center' },
+  loadTxt: { color: theme.colors.text2 },
+  errBox: { backgroundColor: 'rgba(139,58,74,0.15)', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(139,58,74,0.3)' },
+  errTxt: { color: '#c08090', fontSize: 13 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 14, marginBottom: 10, paddingRight: 14, paddingVertical: 16, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden', gap: 12 },
+  rowDone: { backgroundColor: theme.colors.tealDim, borderColor: 'rgba(61,140,124,0.3)' },
+  rowNext: { borderColor: 'rgba(201,168,76,0.4)', backgroundColor: theme.colors.goldDim },
+  rowMissed: { borderColor: 'rgba(212,135,10,0.3)', backgroundColor: theme.colors.amberDim },
+  leftBar: { width: 3, height: '100%', position: 'absolute', left: 0, top: 0 },
+  cb: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border2, justifyContent: 'center', alignItems: 'center', marginLeft: 14 },
+  cbDone: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
+  cbMissed: { borderColor: theme.colors.amber },
   prayerInfo: { flex: 1 },
-  prayerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  prayerName: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
-  prayerNameDone: { color: theme.colors.tealLight },
-  prayerNameNext: { color: theme.colors.gold },
-  arabicName: { fontSize: 14, color: theme.colors.text3 },
-  prayerTime: { fontSize: 13, color: theme.colors.text2 },
-  nextBadge: { backgroundColor: theme.colors.goldDim, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: `rgba(201,168,76,0.4)` },
-  nextBadgeText: { fontSize: 11, color: theme.colors.gold, fontWeight: '700' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  pName: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+  pNameDone: { color: theme.colors.tealLight },
+  pNameNext: { color: theme.colors.gold },
+  pArabic: { fontSize: 13, color: theme.colors.text3 },
+  pTime: { fontSize: 12, color: theme.colors.text2 },
+  nextBadge: { backgroundColor: theme.colors.goldDim, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(201,168,76,0.4)' },
+  nextBadgeTxt: { fontSize: 10, color: theme.colors.gold, fontWeight: '700' },
+  missedBadge: { backgroundColor: theme.colors.amberDim, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(212,135,10,0.3)' },
+  missedBadgeTxt: { fontSize: 10, color: theme.colors.amber, fontWeight: '700' },
+  sunnahHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 14, padding: 16, marginBottom: 4, borderWidth: 1, borderColor: theme.colors.border },
+  sunnahTitle: { fontSize: 14, fontWeight: '600', color: theme.colors.text2 },
+  sunnahRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.colors.surface2, borderRadius: 10, padding: 12, marginBottom: 4, borderWidth: 1, borderColor: theme.colors.border },
+  sunnahLeft: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  sunnahName: { fontSize: 13, fontWeight: '700', color: theme.colors.text3 },
+  sunnahLabel: { fontSize: 13, color: theme.colors.text2 },
+  sunnahNote: { fontSize: 10, color: theme.colors.text3, fontStyle: 'italic' },
 });

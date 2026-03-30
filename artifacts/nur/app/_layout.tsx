@@ -1,4 +1,8 @@
 import {
+  Amiri_400Regular,
+  useFonts as useAmiriFonts,
+} from '@expo-google-fonts/amiri';
+import {
   DMSerifDisplay_400Regular,
   useFonts as useDMSerifFonts,
 } from '@expo-google-fonts/dm-serif-display';
@@ -33,9 +37,10 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const [serifLoaded, serifError] = useDMSerifFonts({ DMSerifDisplay_400Regular });
   const [sansLoaded, sansError] = useDMSansFonts({ DMSans_400Regular, DMSans_500Medium, DMSans_700Bold });
+  const [amiriLoaded, amiriError] = useAmiriFonts({ Amiri_400Regular });
 
-  const fontsLoaded = serifLoaded && sansLoaded;
-  const fontError = serifError || sansError;
+  const fontsLoaded = serifLoaded && sansLoaded && amiriLoaded;
+  const fontError = serifError || sansError || amiriError;
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

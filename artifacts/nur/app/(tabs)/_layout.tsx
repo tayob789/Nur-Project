@@ -6,7 +6,6 @@ import { SymbolView } from 'expo-symbols';
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-
 import { theme } from '@/constants/colors';
 
 function NativeTabLayout() {
@@ -24,9 +23,13 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'book', selected: 'book.fill' }} />
         <Label>Quran</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="zakat">
-        <Icon sf={{ default: 'scalemass', selected: 'scalemass.fill' }} />
-        <Label>Zakat</Label>
+      <NativeTabs.Trigger name="dhikr">
+        <Icon sf={{ default: 'circle.grid.3x3', selected: 'circle.grid.3x3.fill' }} />
+        <Label>Dhikr</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="(more)">
+        <Icon sf={{ default: 'ellipsis', selected: 'ellipsis.circle.fill' }} />
+        <Label>More</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -57,10 +60,10 @@ function ClassicTabLayout() {
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,18,16,0.97)' }]} />
           ),
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: '600',
           marginTop: -4,
-          marginBottom: Platform.OS === 'web' ? 8 : 0,
+          marginBottom: isWeb ? 8 : 0,
         },
       }}
     >
@@ -69,11 +72,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house" tintColor={color} size={22} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="house" tintColor={color} size={22} /> : <Feather name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -81,11 +80,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Prayers',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="moon.stars" tintColor={color} size={22} />
-            ) : (
-              <Feather name="moon" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="moon.stars" tintColor={color} size={22} /> : <Feather name="moon" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -93,23 +88,23 @@ function ClassicTabLayout() {
         options={{
           title: 'Quran',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="book" tintColor={color} size={22} />
-            ) : (
-              <Feather name="book-open" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="book" tintColor={color} size={22} /> : <Feather name="book-open" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="zakat"
+        name="dhikr"
         options={{
-          title: 'Zakat',
+          title: 'Dhikr',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="scalemass" tintColor={color} size={22} />
-            ) : (
-              <Feather name="dollar-sign" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="circle.grid.3x3" tintColor={color} size={22} /> : <Feather name="circle" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="(more)"
+        options={{
+          title: 'More',
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="ellipsis" tintColor={color} size={22} /> : <Feather name="grid" size={22} color={color} />,
         }}
       />
     </Tabs>
