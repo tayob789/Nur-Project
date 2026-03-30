@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Nur — Islamic Lifestyle App"
+version = "1.0.0"
+id = "artifacts/nur"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 21981
+
+[services.development]
+run = "pnpm --filter @workspace/nur run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nur", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/nur", "run", "serve" ]
+
+[services.env]
+PORT = "21981"
+BASE_PATH = "/"

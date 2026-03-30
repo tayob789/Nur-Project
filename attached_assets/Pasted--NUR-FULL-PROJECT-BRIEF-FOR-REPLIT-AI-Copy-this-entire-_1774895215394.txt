@@ -1,0 +1,688 @@
+# NUR — FULL PROJECT BRIEF FOR REPLIT AI
+# Copy this entire document as your prompt. Do not summarise it.
+
+---
+
+## WHO I AM
+
+I am a solo UK-based technical founder building a React Native mobile app called **Nur**. I have a background in Python, IT support, sysadmin work, automation, and scripting. I am comfortable with code but this is my first mobile app. I am building on Windows using PowerShell. I am testing on a physical Android device using Expo Go. My development environment is Expo + React Native + TypeScript.
+
+---
+
+## WHAT NUR IS
+
+**Nur** (Arabic: نور, meaning "light") is a premium Islamic lifestyle app for iOS and Android. It is a Muslim routine operating system — helping Muslims stay consistent with daily worship, Quran goals, and zakat planning.
+
+**Core positioning:** The privacy-first, trust-centered alternative to Muslim Pro and similar apps. No ads. No data selling. No tracking. Ever. This is not just an ethical stance — it is the entire competitive advantage. Muslim Pro was caught selling user location data to the US military. Tens of thousands of users deleted it. The Muslim community is actively looking for a trustworthy alternative. Nur is that alternative.
+
+**Target users:**
+- Young Muslim professionals in the UK (primary)
+- Muslim families who want shared household goals
+- Practicing Muslims who want structure and consistency
+- UK Muslims aged 18–40 who use smartphones daily
+
+**Tone and feel:** Premium, spiritual, honest. Like Nusuk (the Saudi Ministry of Hajj app) — dark near-black backgrounds, warm gold (#c9a84c) as the primary accent, subtle geometric Islamic lattice patterns as texture, DM Serif Display for headings. Never cheesy. Never cliché. Never gamified in a way that feels disrespectful to worship.
+
+**Business model:** Direct-to-consumer subscription only. No mosque B2B (ruled out). No ads. No data selling.
+- Free tier: prayer tracker, basic Quran log, zakat calculator
+- Premium: £3.99/month — push notifications, streak tracking, Ramadan mode, widgets, full Quran goals
+- Family: £6.99/month — up to 6 profiles, shared goals, parent dashboard
+- Payments via RevenueCat (handles iOS + Android in-app purchases)
+
+---
+
+## CURRENT STATE OF THE PROJECT
+
+I have already:
+1. Created an Expo React Native project using `npx create-expo-app nur --template blank-typescript`
+2. Installed dependencies: `@supabase/supabase-js @react-navigation/native @react-navigation/bottom-tabs react-native-safe-area-context react-native-screens expo-secure-store expo-notifications expo-location`
+3. Built an HTML/CSS/JS prototype of the full UI (see design section below)
+4. Built a React Native starter codebase with the following files already written:
+
+### EXISTING FILE STRUCTURE
+```
+nur/
+├── App.tsx                        (bottom tab navigator, 4 screens)
+├── src/
+│   ├── theme/
+│   │   └── index.ts               (colour tokens)
+│   └── screens/
+│       ├── HomeScreen.tsx          (greeting, next prayer, prayer strip, goals, streak)
+│       ├── PrayersScreen.tsx       (full prayer list with toggle, completion ring)
+│       ├── QuranScreen.tsx         (hero stats, stepper controls, milestones)
+│       └── ZakatScreen.tsx         (input fields, live calculation, disclaimer)
+```
+
+### CURRENT LIMITATIONS (things not yet built)
+- No real prayer times — currently hardcoded mock data
+- No location permission or GPS
+- No Supabase connection — no database yet
+- No user authentication — no login/signup
+- No data persistence — state resets on app close
+- No push notifications
+- No onboarding flow
+- No settings screen
+- No premium/paywall logic
+- No RevenueCat integration
+- Prayer times are static, not based on user location or date
+
+---
+
+## DESIGN SYSTEM — IMPLEMENT EXACTLY
+
+### Colour tokens (from src/theme/index.ts)
+```typescript
+export const theme = {
+  colors: {
+    bg: '#0c0b09',
+    surface: '#141210',
+    surface2: '#1c1914',
+    surface3: '#221f1a',
+    border: 'rgba(255,255,255,0.07)',
+    border2: 'rgba(255,255,255,0.12)',
+    gold: '#c9a84c',
+    goldLight: '#e8c97a',
+    goldDim: 'rgba(201,168,76,0.15)',
+    teal: '#3d8c7c',
+    tealLight: '#5ab5a2',
+    tealDim: 'rgba(61,140,124,0.15)',
+    text: '#ede8df',
+    text2: '#9c9488',
+    text3: '#5c5750',
+  },
+};
+```
+
+### Typography
+- Headings / display: DM Serif Display (Google Font) — use `@expo-google-fonts/dm-serif-display`
+- Body / UI: DM Sans — use `@expo-google-fonts/dm-sans`
+- Fallback if fonts not loaded: System serif / System sans
+
+### Design language
+- Dark near-black backgrounds always
+- Gold is sacred — use it only for primary actions, next prayer, active states, key numbers
+- Teal for completion/success states (prayers done, goals met)
+- Geometric Islamic lattice pattern as subtle background texture (very low opacity, ~4%)
+- Cards have 1px borders at rgba(255,255,255,0.07) — never solid borders
+- Border radius: 16–20px on cards, 12px on smaller elements, 50% on circles
+- No shadows — depth comes from layered dark surfaces
+- StatusBar: always light-content (white text) on dark background
+- SafeAreaView on every screen
+
+### Bottom navigation
+- 4 tabs: Home, Prayers, Quran, Zakat
+- Background: rgba(20,18,16,0.97) with blur
+- Active tab: gold accent + gold dot indicator
+- Inactive: text3 (#5c5750)
+- Height: 80px
+- No default labels — custom TabIcon component
+
+---
+
+## THE 4 SCREENS — DETAILED SPEC
+
+### 1. HOME SCREEN
+**Header:**
+- Small gold uppercase label: "ASSALAMU ALAIKUM"
+- Large bold name: "Muhammad" (will come from user profile once auth is built)
+- Subtitle: Current Hijri + Gregorian date
+- Right side: circular avatar with Arabic initial م, gold border
+
+**Next Prayer Card:**
+- Prominent card with subtle gold border
+- Shows: next prayer name, time, countdown ("in X minutes")
+- Background: slightly lighter dark surface with radial gold glow in corner
+- "Prepare now" badge
+
+**Prayer Strip:**
+- Horizontal scrollable row of 5 prayer pills
+- Each shows: name, time, done/upcoming status
+- Done state: teal background, teal text
+- Current/next: gold background, gold text
+- Tapping a pill toggles done state
+
+**Goal Cards:**
+- 2-column grid
+- Card 1: Prayer completion (X/5 today, progress bar in gold)
+- Card 2: Quran this week (pages/goal, progress bar in teal)
+
+**Streak Card:**
+- Shows current streak number ("7 days")
+- 7 day dots (Mon–Sun), done = teal, today = gold
+
+**Reminders section:**
+- List of upcoming reminders with colour-coded dots
+
+### 2. PRAYERS SCREEN
+**Header:** Hijri date, "Daily Salah", subtitle
+
+**Completion summary:**
+- Circular ring showing percentage complete (using progress via border or SVG)
+- Dynamic message based on number done (0–5)
+- Subtext: prayers remaining
+
+**Prayer list (5 rows):**
+- Each row: checkbox circle + prayer name + Arabic name + time + status
+- Done: teal left border strip, teal checkbox with checkmark, teal text
+- Current/next: gold left border, gold badge
+- Tap to toggle
+- Smooth state transitions
+
+### 3. QURAN SCREEN
+**Header:** "Weekly Goal" eyebrow, "Quran Planner" title
+
+**Hero card:**
+- 3 stats: pages read / weekly goal / remaining
+- Gold progress bar
+- Percentage label
+
+**Pages counter:**
+- Large stepper control: minus button, big number, plus button
+- Separate stepper for weekly goal
+
+**Milestones section:**
+- 3 cards: pages per year (calculated), khatms per year (pages*52/604), weeks active
+
+### 4. ZAKAT SCREEN
+**Header:** "Annual Obligation" eyebrow, "Zakat Calculator" title
+
+**Result card:**
+- Dark teal-tinted header showing calculated amount
+- Status indicator: above/below nisab
+- Input fields below: cash, gold, investments, stock, liabilities, nisab
+- Each field: label + hint text + £ prefixed number input
+- Live calculation as user types
+
+**Disclaimer:**
+- Teal-tinted note box at bottom
+- Clear fiqh disclaimer text
+
+---
+
+## WHAT I NEED YOU TO BUILD — PRIORITY ORDER
+
+Work through these in order. Do not skip ahead. Confirm each one works before moving to the next.
+
+### PRIORITY 1 — Fix and complete the existing screens
+Review the existing code and ensure:
+- All 4 screens render correctly on Android
+- Theme colours are applied consistently from `src/theme/index.ts`
+- No hardcoded colours anywhere — always use `theme.colors.*`
+- StyleSheet objects use the `s` or `styles` naming convention
+- All TouchableOpacity elements have `activeOpacity={0.7}`
+- All screens have `SafeAreaView` and `StatusBar barStyle="light-content"`
+- The bottom nav renders correctly with custom TabIcon
+- App does not crash on Android
+
+### PRIORITY 2 — Real prayer times via Aladhan API
+Replace all hardcoded prayer time data with real location-aware times.
+
+**Implementation:**
+1. Request location permission using `expo-location` (`Location.requestForegroundPermissionsAsync()`)
+2. Get current coordinates (`Location.getCurrentPositionAsync()`)
+3. Call Aladhan API: `https://api.aladhan.com/v1/timings/{timestamp}?latitude={lat}&longitude={lng}&method=2`
+   - Method 2 = Islamic Society of North America (good for UK)
+   - Method 3 = Muslim World League (also good for UK, slightly different)
+   - Use method 2 as default
+4. Parse response: Fajr, Dhuhr, Asr, Maghrib, Isha times
+5. Store in state
+6. Calculate which prayer is "next" based on current time
+7. Calculate countdown to next prayer
+8. Show loading state while fetching
+9. Show error state if location denied or API fails
+10. Refresh daily (not on every render)
+
+**Aladhan API response shape:**
+```json
+{
+  "data": {
+    "timings": {
+      "Fajr": "05:14",
+      "Dhuhr": "12:22",
+      "Asr": "15:48",
+      "Maghrib": "18:42",
+      "Isha": "20:07"
+    }
+  }
+}
+```
+
+**Create a custom hook:** `src/hooks/usePrayerTimes.ts`
+- Returns: `{ prayers, nextPrayer, countdown, loading, error, refresh }`
+- Uses `useEffect` to fetch on mount
+- Stores result in `AsyncStorage` with date key so it survives app close
+- Refreshes if stored date !== today
+
+**Also calculate Hijri date** for display in headers:
+- Use the Aladhan calendar API: `https://api.aladhan.com/v1/gToH?date={DD-MM-YYYY}`
+- Or calculate offline using a simple Hijri conversion algorithm
+
+### PRIORITY 3 — Supabase setup and authentication
+
+**Create a Supabase project at supabase.com (free tier)**
+
+**Environment variables in `.env`:**
+```
+EXPO_PUBLIC_SUPABASE_URL=your_project_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+**Create `src/lib/supabase.ts`:**
+```typescript
+import { createClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
+
+const ExpoSecureStoreAdapter = {
+  getItem: (key: string) => SecureStore.getItemAsync(key),
+  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+};
+
+export const supabase = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      storage: ExpoSecureStoreAdapter as any,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+  }
+);
+```
+
+**Auth screens to build:**
+
+`src/screens/auth/WelcomeScreen.tsx`
+- Full screen dark background
+- Nur logo/wordmark centred (use the geometric hexagon SVG icon)
+- Arabic calligraphy-style "نور" in gold
+- Tagline: "Your Muslim routine, beautifully organised"
+- Two buttons: "Get started" (gold, primary) and "Sign in" (outline, secondary)
+- Same dark gold aesthetic as the rest of the app
+
+`src/screens/auth/SignUpScreen.tsx`
+- Email + password fields
+- Styled to match app theme (dark inputs, gold focus border)
+- "Create account" button
+- Link back to sign in
+- Error handling
+
+`src/screens/auth/SignInScreen.tsx`
+- Email + password
+- "Sign in" button  
+- Forgot password link
+- Link to sign up
+- Error handling
+
+**Auth state management in `App.tsx`:**
+```typescript
+// Show auth screens if no session
+// Show main tab navigator if session exists
+// Listen to supabase.auth.onAuthStateChange
+```
+
+**Navigation structure:**
+```
+App.tsx
+├── AuthNavigator (Stack) — if no session
+│   ├── WelcomeScreen
+│   ├── SignUpScreen
+│   └── SignInScreen
+└── MainNavigator (Tab) — if session exists
+    ├── HomeScreen
+    ├── PrayersScreen
+    ├── QuranScreen
+    └── ZakatScreen
+```
+
+### PRIORITY 4 — Supabase database schema
+
+Run these SQL statements in your Supabase SQL editor to create the schema:
+
+```sql
+-- Users profile (extends Supabase auth.users)
+create table public.profiles (
+  id uuid references auth.users(id) primary key,
+  display_name text,
+  arabic_name text,
+  location_city text,
+  location_lat float,
+  location_lng float,
+  prayer_method integer default 2,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Prayer logs
+create table public.prayer_logs (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) not null,
+  prayer_name text not null,           -- 'Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'
+  prayer_date date not null,
+  completed boolean default false,
+  completed_at timestamptz,
+  created_at timestamptz default now(),
+  unique(user_id, prayer_name, prayer_date)
+);
+
+-- Quran sessions
+create table public.quran_sessions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) not null,
+  week_start date not null,            -- Monday of the week
+  pages_read integer default 0,
+  weekly_goal integer default 35,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, week_start)
+);
+
+-- Zakat calculations (save history)
+create table public.zakat_calculations (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) not null,
+  cash numeric default 0,
+  gold numeric default 0,
+  investments numeric default 0,
+  stock numeric default 0,
+  liabilities numeric default 0,
+  nisab numeric default 430,
+  net_wealth numeric generated always as (cash + gold + investments + stock - liabilities) stored,
+  zakat_due numeric generated always as (
+    case when (cash + gold + investments + stock - liabilities) >= nisab
+    then (cash + gold + investments + stock - liabilities) * 0.025
+    else 0 end
+  ) stored,
+  created_at timestamptz default now()
+);
+
+-- Row level security
+alter table public.profiles enable row level security;
+alter table public.prayer_logs enable row level security;
+alter table public.quran_sessions enable row level security;
+alter table public.zakat_calculations enable row level security;
+
+create policy "Users can manage their own profile"
+  on public.profiles for all using (auth.uid() = id);
+
+create policy "Users can manage their own prayer logs"
+  on public.prayer_logs for all using (auth.uid() = user_id);
+
+create policy "Users can manage their own quran sessions"
+  on public.quran_sessions for all using (auth.uid() = user_id);
+
+create policy "Users can manage their own zakat calculations"
+  on public.zakat_calculations for all using (auth.uid() = user_id);
+```
+
+### PRIORITY 5 — Wire screens to Supabase
+
+**Prayer logs:**
+- On app load, fetch today's prayer_logs for the current user
+- When user taps a prayer to toggle: upsert to prayer_logs table
+- Calculate streak by querying last N days of prayer_logs
+
+**Quran sessions:**
+- On Quran screen load, fetch or create a quran_session for current week
+- When user updates pages: update the record
+- Show historical weeks in a simple list
+
+**Zakat:**
+- Auto-save calculation when user stops typing (debounce 1000ms)
+- Load most recent calculation on screen open
+
+**Create a data service layer in `src/lib/`:**
+- `prayers.ts` — all prayer log operations
+- `quran.ts` — all quran session operations
+- `zakat.ts` — all zakat calculation operations
+
+### PRIORITY 6 — Onboarding flow
+
+After sign up, show a 3-step onboarding before the main app:
+
+**Step 1 — Name:**
+- "What shall we call you?"
+- Text input for display name
+- Arabic name input (optional)
+
+**Step 2 — Location:**
+- "Where are you based?"
+- "We use this only for prayer times. We never sell your data."
+- Button: "Allow location access" — triggers expo-location permission
+- Manual fallback: city name input
+
+**Step 3 — Prayer method:**
+- "Which calculation method do you follow?"
+- Options: Muslim World League, ISNA, Egypt, Makkah, Karachi
+- Default to Muslim World League for UK users
+- Simple selectable cards
+
+After onboarding: save to profiles table, navigate to main app.
+
+### PRIORITY 7 — Settings screen
+
+Add a 5th tab or accessible from Home screen header:
+
+`src/screens/SettingsScreen.tsx`
+
+Sections:
+- **Account:** display name, email, sign out button
+- **Prayer:** calculation method selector, location (city name), manual location override
+- **Notifications:** toggle for each prayer (Fajr, Dhuhr, Asr, Maghrib, Isha), minutes before
+- **Quran:** default weekly goal
+- **About:** version number, privacy policy link, "We will never sell your data" statement
+- **Danger zone:** Delete account (with confirmation)
+
+### PRIORITY 8 — Push notifications
+
+Using `expo-notifications`:
+
+1. Request notification permissions on first launch
+2. Schedule local notifications for each prayer
+3. Notification text: "Time for {prayer name} — {time}"
+4. Respect per-prayer toggle from settings
+5. Reschedule daily (cancel all → reschedule based on today's times)
+6. Cancel notifications when app is in foreground (show in-app banner instead)
+
+```typescript
+// src/lib/notifications.ts
+export async function schedulePrayerNotifications(prayers: Prayer[], settings: NotificationSettings) {
+  await Notifications.cancelAllScheduledNotificationsAsync();
+  for (const prayer of prayers) {
+    if (!settings[prayer.name]) continue;
+    // schedule for today's time
+  }
+}
+```
+
+---
+
+## COMPLETE FOLDER STRUCTURE TO BUILD
+
+```
+nur/
+├── App.tsx
+├── .env                              (never commit this)
+├── .gitignore                        (include .env)
+├── app.json
+├── package.json
+├── tsconfig.json
+└── src/
+    ├── theme/
+    │   └── index.ts                  (colour tokens — already written)
+    ├── lib/
+    │   ├── supabase.ts               (client setup)
+    │   ├── prayers.ts                (prayer log DB operations)
+    │   ├── quran.ts                  (quran session DB operations)
+    │   ├── zakat.ts                  (zakat calculation DB operations)
+    │   └── notifications.ts          (push notification scheduling)
+    ├── hooks/
+    │   ├── usePrayerTimes.ts         (Aladhan API + location)
+    │   ├── useAuth.ts                (Supabase auth state)
+    │   ├── usePrayerLogs.ts          (today's logs + streak)
+    │   └── useQuranSession.ts        (current week session)
+    ├── screens/
+    │   ├── auth/
+    │   │   ├── WelcomeScreen.tsx
+    │   │   ├── SignUpScreen.tsx
+    │   │   └── SignInScreen.tsx
+    │   ├── onboarding/
+    │   │   └── OnboardingScreen.tsx  (3-step flow)
+    │   ├── HomeScreen.tsx            (already written — improve)
+    │   ├── PrayersScreen.tsx         (already written — improve)
+    │   ├── QuranScreen.tsx           (already written — improve)
+    │   ├── ZakatScreen.tsx           (already written — improve)
+    │   └── SettingsScreen.tsx        (new)
+    ├── components/
+    │   ├── PrayerRow.tsx             (reusable prayer row component)
+    │   ├── ProgressBar.tsx           (reusable progress bar)
+    │   ├── GoldButton.tsx            (primary CTA button)
+    │   ├── OutlineButton.tsx         (secondary button)
+    │   ├── StatCard.tsx              (metric card)
+    │   └── GeometricPattern.tsx      (background texture SVG)
+    └── types/
+        └── index.ts                  (TypeScript interfaces)
+```
+
+---
+
+## TYPESCRIPT INTERFACES
+
+Create `src/types/index.ts`:
+
+```typescript
+export interface Prayer {
+  name: 'Fajr' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha';
+  arabic: string;
+  time: string;         // "HH:MM" format
+  done: boolean;
+  isCurrent: boolean;   // is this the next upcoming prayer
+}
+
+export interface PrayerLog {
+  id: string;
+  user_id: string;
+  prayer_name: string;
+  prayer_date: string;  // "YYYY-MM-DD"
+  completed: boolean;
+  completed_at: string | null;
+}
+
+export interface QuranSession {
+  id: string;
+  user_id: string;
+  week_start: string;   // "YYYY-MM-DD"
+  pages_read: number;
+  weekly_goal: number;
+}
+
+export interface ZakatCalculation {
+  cash: number;
+  gold: number;
+  investments: number;
+  stock: number;
+  liabilities: number;
+  nisab: number;
+  net_wealth: number;
+  zakat_due: number;
+}
+
+export interface UserProfile {
+  id: string;
+  display_name: string;
+  arabic_name: string;
+  location_city: string;
+  location_lat: number;
+  location_lng: number;
+  prayer_method: number;
+}
+
+export interface NotificationSettings {
+  Fajr: boolean;
+  Dhuhr: boolean;
+  Asr: boolean;
+  Maghrib: boolean;
+  Isha: boolean;
+  minutesBefore: number;
+}
+```
+
+---
+
+## CODING STANDARDS — FOLLOW THESE EXACTLY
+
+1. **No hardcoded colours** — always `theme.colors.gold`, never `'#c9a84c'` directly in styles
+2. **StyleSheet at the bottom** of every file, named `s` (short) or `styles` (verbose for complex screens)
+3. **No inline styles** except for dynamic values (e.g. `{ width: \`${pct}%\` }`)
+4. **Every screen** must have `SafeAreaView` as root and `StatusBar barStyle="light-content"`
+5. **Every TouchableOpacity** must have `activeOpacity={0.7}`
+6. **Loading states** — every async operation must show a loading indicator
+7. **Error states** — every async operation must handle errors gracefully with user-facing messages
+8. **TypeScript** — no `any` types except where absolutely unavoidable (Supabase storage adapter)
+9. **Custom hooks** for all data fetching — never fetch directly in screen components
+10. **Comments** on anything non-obvious
+11. **No console.log** in production code — use a proper logging pattern or remove
+12. **Consistent file naming** — PascalCase for components and screens, camelCase for hooks and utilities
+
+---
+
+## WINDOWS POWERSHELL NOTES
+
+This founder is on Windows. All terminal commands must:
+- Use single-line format (no backslash line continuation)
+- Use PowerShell-compatible syntax
+- Use `\` for path separators or quote paths with spaces
+
+Example — correct:
+```powershell
+npx expo install @supabase/supabase-js @react-navigation/native @react-navigation/bottom-tabs
+```
+
+Example — wrong (breaks PowerShell):
+```bash
+npx expo install @supabase/supabase-js \
+  @react-navigation/native \
+  @react-navigation/bottom-tabs
+```
+
+---
+
+## COMPETITIVE CONTEXT — IMPORTANT FOR PRODUCT DECISIONS
+
+- **Muslim Pro** — market leader, 170M downloads, £12.99/month. AVOID: they were exposed selling user location data to US military contractors. Thousands of Muslims deleted the app. This is our entire market opening.
+- **Athan (by Islamic Network)** — free with ads, recently paywalled widgets causing user backlash. AVOID their approach of removing free features.
+- **Our positioning** — premium but affordable (£3.99/mo), zero ads, zero data selling, privacy policy is marketing copy not small print.
+
+---
+
+## WHAT NEVER TO DO IN THIS APP
+
+- Never sell or share user data with any third party
+- Never add advertising of any kind
+- Never put core worship features (prayer times, qibla, basic Quran access) behind a paywall
+- Never use dark patterns to force upgrades
+- Never turn prayer tracking into points, badges, or leaderboards in a way that feels disrespectful
+- Never make the app feel like a productivity tool at the expense of spiritual purpose
+- Never use harsh red error states — use muted, respectful error messaging
+
+---
+
+## IMMEDIATE TASK
+
+Start with **Priority 1** — review and fix the existing screens so they render correctly on Android. Then move to **Priority 2** — wire in real prayer times from the Aladhan API with location permission.
+
+When you complete each priority, tell me what was done and what the next step is. Show me the full file contents of anything you create or modify. Do not summarise code — output the complete files.
+
+Ask me for my Supabase URL and anon key when you reach Priority 3. Do not proceed with Supabase integration until I provide those.
+
+---
+
+## FINAL NOTES
+
+- This is a real product being built for launch, not a demo
+- The founder cares deeply about the Muslim community and the Islamic integrity of this app
+- Every feature decision should pass the test: "Is this useful to a Muslim trying to stay consistent with their deen?"
+- The name Nur means light — the app should feel like clarity, not clutter
+- Build for trust. The whole business is built on being the app that doesn't betray its users.
