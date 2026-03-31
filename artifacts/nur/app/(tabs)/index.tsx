@@ -1,6 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -22,7 +23,7 @@ import { VERSES_OF_THE_DAY } from '@/data/verses';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useQuranGoal } from '@/hooks/useQuranGoal';
 import { useStreak } from '@/hooks/useStreak';
-import { getGreeting, getRamadanInfo } from '@/utils/greeting';
+import { getRamadanInfo, getIslamicGreeting } from '@/utils/greeting';
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const TODAY_IDX = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
@@ -34,8 +35,10 @@ const dayOfYear = () => {
 };
 const todayVerse = VERSES_OF_THE_DAY[dayOfYear() % VERSES_OF_THE_DAY.length];
 const todayHadith = HADITH_OF_THE_DAY[dayOfYear() % HADITH_OF_THE_DAY.length];
-const greeting = getGreeting();
 const ramadan = getRamadanInfo();
+const islamicGreeting = getIslamicGreeting();
+
+const GREETING_KEY = 'nur_last_greeting_date';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -45,9 +48,29 @@ export default function HomeScreen() {
   const { text: countdown, isUrgent } = useCountdown(nextPrayer?.time ?? null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fullGreetingOpacity = useRef(new Animated.Value(0)).current;
+  const [showFullGreeting, setShowFullGreeting] = useState(false);
+
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
+    checkFirstDailyOpen();
   }, []);
+
+  async function checkFirstDailyOpen() {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const stored = await AsyncStorage.getItem(GREETING_KEY);
+      if (stored !== today) {
+        await AsyncStorage.setItem(GREETING_KEY, today);
+        setShowFullGreeting(true);
+        Animated.sequence([
+          Animated.timing(fullGreetingOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.delay(2600),
+          Animated.timing(fullGreetingOpacity, { toValue: 0, duration: 800, useNativeDriver: true }),
+        ]).start(() => setShowFullGreeting(false));
+      }
+    } catch {}
+  }
 
   const prayersDone = prayers.filter((p) => p.done).length;
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -56,6 +79,17 @@ export default function HomeScreen() {
     <View style={s.root}>
       <StatusBar barStyle="light-content" />
       <GeometricBackground />
+
+      {/* Full greeting overlay — first daily open only */}
+      {showFullGreeting && (
+        <Animated.View
+          style={[s.fullGreetingOverlay, { opacity: fullGreetingOpacity }]}
+          pointerEvents="none"
+        >
+          <Text style={s.fullGreetingText}>{islamicGreeting.full}</Text>
+        </Animated.View>
+      )}
+
       <ScrollView
         style={s.scroll}
         contentContainerStyle={[s.content, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 100 }]}
@@ -65,8 +99,8 @@ export default function HomeScreen() {
 
           {/* Header */}
           <View style={s.header}>
-            <View>
-              <Text style={s.greeting}>{greeting.label}</Text>
+            <View style={s.headerLeft}>
+              <Text style={s.shortGreeting}>{islamicGreeting.short}</Text>
               <Text style={s.name}>Muhammad</Text>
               <Text style={s.subdate}>
                 {new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })}
@@ -74,7 +108,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <View style={s.avatar}>
-              <Text style={s.avatarArabic}>{greeting.arabic[0]}</Text>
+              <Text style={s.avatarText}>{'\u0645'}</Text>
             </View>
           </View>
 
@@ -187,7 +221,7 @@ export default function HomeScreen() {
           {/* Hadith of the Day */}
           <View style={s.hadithCard}>
             <Text style={s.hadithEyebrow}>HADITH OF THE DAY</Text>
-            <Text style={s.hadithPrefix}>The Prophet \u262d said:</Text>
+            <Text style={s.hadithPrefix}>{`The Prophet \u262d said:`}</Text>
             <Text style={s.hadithText}>"{todayHadith.text}"</Text>
             <Text style={s.hadithSource}>{todayHadith.source} · {todayHadith.narrator}</Text>
           </View>
@@ -203,12 +237,40 @@ const s = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: 18 },
 
+  fullGreetingOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 99,
+    backgroundColor: 'rgba(12,11,9,0.88)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  fullGreetingText: {
+    fontFamily: 'Amiri_400Regular',
+    fontSize: 26,
+    color: '#D4A017',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    lineHeight: 46,
+    letterSpacing: 0.5,
+  },
+
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 },
-  greeting: { fontSize: 10, letterSpacing: 2.5, color: theme.colors.gold, fontWeight: '600', marginBottom: 4 },
+  headerLeft: { flex: 1 },
+  shortGreeting: {
+    fontFamily: 'Amiri_400Regular',
+    fontSize: 18,
+    color: '#D4A017',
+    writingDirection: 'rtl',
+    textAlign: 'left',
+    marginBottom: 4,
+    lineHeight: 28,
+  },
   name: { fontSize: 26, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
   subdate: { fontSize: 12, color: theme.colors.text2 },
-  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: theme.colors.gold, backgroundColor: theme.colors.goldDim, justifyContent: 'center', alignItems: 'center' },
-  avatarArabic: { fontSize: 22, color: theme.colors.gold },
+  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: theme.colors.gold, backgroundColor: theme.colors.goldDim, justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
+  avatarText: { fontSize: 22, color: theme.colors.gold, fontFamily: 'Amiri_400Regular' },
 
   ramadanCard: { borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)', alignItems: 'center' },
   ramadanEyebrow: { fontSize: 9, letterSpacing: 2.5, color: theme.colors.gold, fontWeight: '700', marginBottom: 6, opacity: 0.8 },

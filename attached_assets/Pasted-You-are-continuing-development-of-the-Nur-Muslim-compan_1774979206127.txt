@@ -1,0 +1,188 @@
+You are continuing development of the Nur Muslim companion app. The app currently has 4 working screens: Home Dashboard, Daily Prayers tracker, Quran Planner, and Dhikr Counter. The design uses a dark theme with gold (#D4A017) accents on a near-black (#171614) background. Maintain this exact design language throughout all new features.
+
+---
+
+## PART 1 — APP-WIDE OPTIMISATIONS
+
+1. **Onboarding Flow** — When the app is opened for the first time, show a 4-step onboarding carousel:
+   - Step 1: Welcome screen with Nur logo and tagline "Your daily companion for worship"
+   - Step 2: Ask for name (text input, save to localStorage as `nurUserName`)
+   - Step 3: Ask for location permission for automatic prayer times (with a manual city fallback input)
+   - Step 4: Ask for notification preferences (prayer reminders ON/OFF toggle)
+   Store onboarding completion in localStorage as `nurOnboarded = true`. Skip onboarding on subsequent opens.
+
+2. **Push Notifications** — Implement browser Push Notification API. On the prayers screen, add a bell icon next to each prayer. When toggled ON, schedule a notification 10 minutes before that prayer time. Show a "Notifications require browser permission" prompt if permission is denied.
+
+3. **Haptic Feedback** — On the Dhikr Counter, use `navigator.vibrate(30)` on every counter tap for tactile feedback on mobile.
+
+4. **Streak System** — On the Home dashboard, the "Day Streak" should increment by 1 each day the user marks all 5 prayers as complete. Store streak data in localStorage. If a day is missed, streak resets to 0. Show a flame 🔥 icon next to the streak count. Add a best streak record below it.
+
+5. **Prayer Completion** — On the Daily Prayers screen, when a user taps a prayer circle to mark it as done, animate a gold checkmark filling the circle with a smooth scale-in + fade animation (300ms ease-out). Update the "X of 5" counter on the home dashboard in real time.
+
+6. **Qibla Compass** — Add a new tab in the bottom nav called "Qibla" (use a compass icon). It should:
+   - Use the browser DeviceOrientationEvent API to show a live compass
+   - Calculate and display the Qibla direction based on the user's saved location
+   - Show a large gold needle pointing toward Mecca
+   - Show the degrees bearing and distance to Mecca in km
+   - Fallback: if orientation API unavailable, show manual bearing calculation with instructions
+
+7. **Settings Screen** — Add a "Settings" option inside the "More" tab (grid icon). Settings should include:
+   - Display name (editable)
+   - City / location (editable, updates prayer times)
+   - Calculation method for prayer times (dropdown: MWL, ISNA, Egypt, Makkah, Karachi, Tehran, Jafari)
+   - Asr method (Standard / Hanafi)
+   - Language preference (English / Arabic labels toggle)
+   - Notification toggles per prayer
+   - Reset all data button (with confirmation modal)
+
+8. **Offline Support** — Add a Service Worker that caches all app assets and prayer time data so the app works fully offline after first load.
+
+9. **Home Screen Install (PWA)** — Add a Web App Manifest (`manifest.json`) with:
+   - App name: "Nur"
+   - Short name: "Nur"
+   - Theme color: `#D4A017`
+   - Background color: `#171614`
+   - Display: `standalone`
+   - Icons at 192x192 and 512x512 (generate simple gold crescent moon + star icon as SVG, convert to PNG)
+   - An "Add to Home Screen" banner should appear at the bottom after the user has visited 3 times (track in localStorage as `nurVisitCount`)
+
+10. **Smooth Page Transitions** — Add a 200ms fade + slight upward slide (translateY: 8px → 0) when switching between bottom nav tabs using CSS transitions.
+
+---
+
+## PART 2 — PREMIUM (NUR GOLD) PAYWALL
+
+Create a premium tier called **"Nur Gold"** with a gold gradient badge. Gate the following features behind it:
+
+### Paywall UI
+- On any locked feature, show a gold lock icon overlay with the text "Nur Gold" and a "Unlock" button
+- Create a dedicated **Nur Gold** upgrade screen (accessible from More tab and any locked feature) showing:
+  - A centered gold crescent moon logo with a subtle glow animation
+  - Heading: "Elevate Your Worship"
+  - Three pricing options displayed as cards:
+    - Monthly: £2.99/month
+    - Annual: £19.99/year (saves 44% — highlight this as "Best Value" with a gold banner)
+    - Lifetime: £49.99 once
+  - Feature list with gold checkmarks:
+    ✓ Unlimited Azkar Collections
+    ✓ Advanced Prayer Statistics
+    ✓ Quran Audio Recitations
+    ✓ Islamic Calendar & Events
+    ✓ 99 Names of Allah (Al-Asma ul-Husna)
+    ✓ Tasbeeh history & analytics
+    ✓ Custom Dhikr creation
+    ✓ Widget support
+    ✓ Ad-free experience
+  - "Start 7-Day Free Trial" CTA button (gold gradient background)
+  - Small grey text: "Cancel anytime. Restore purchases."
+- For now, implement a mock purchase flow: clicking "Start Free Trial" sets `nurGoldActive = true` in localStorage and shows a success animation, then redirects back. Add a "Restore Purchase" button that checks localStorage.
+
+### Premium Feature 1 — Advanced Prayer Statistics (Nur Gold)
+- Add a "Statistics" section inside the Prayers tab
+- Show a 30-day heatmap calendar of prayer completion (like GitHub contributions grid)
+- Show per-prayer completion rate as a horizontal bar chart (e.g., "Fajr: 62%")
+- Show a weekly trend line chart
+- Show total prayers completed all-time counter
+
+### Premium Feature 2 — Quran Audio Recitations (Nur Gold)
+- Inside the Quran tab, add an "Audio" section
+- Show a list of the 114 Surahs with name in Arabic + English + number of ayahs
+- Each Surah has a play button that streams audio from: `https://cdn.islamic.network/quran/audio/128/ar.alafasy/{surahNumber}.mp3`
+- Show a mini audio player bar at the bottom (above the nav): Surah name, play/pause, progress bar, skip 10s, reciter name
+- Allow selecting from 3 reciters: Al-Afasy, Abdul Basit, Mishary Rashid
+
+### Premium Feature 3 — 99 Names of Allah (Nur Gold)
+- Add a "99 Names" card on the home screen and a full screen in the More tab
+- Display all 99 names in a scrollable list with:
+  - Number badge (gold)
+  - Arabic name (large, Arabic font)
+  - Transliteration
+  - English meaning
+  - A "Learn" button that expands a brief explanation
+- Add a search bar to filter names
+- Add a "Daily Name" feature: each day a different name is highlighted on the home screen
+
+### Premium Feature 4 — Islamic Calendar & Events (Nur Gold)
+- Add an "Events" card on the home screen
+- Show a monthly calendar view with Islamic dates (Hijri) mapped to Gregorian
+- Highlight major Islamic events: Ramadan start/end, Eid al-Fitr, Eid al-Adha, Laylat al-Qadr nights (21, 23, 25, 27, 29 Ramadan), Mawlid, Ashura, Isra Mi'raj
+- Each event has a countdown: "X days away"
+- Show a list view of upcoming events for the next 90 days
+
+### Premium Feature 5 — Custom Dhikr Creation (Nur Gold)
+- On the Dhikr screen, add a "+" button to create a custom dhikr
+- Form fields: Arabic text (optional), transliteration, translation, target count
+- Custom dhikrs appear in the tabs alongside the defaults
+- Save custom dhikrs to localStorage under `nurCustomDhikr`
+
+### Premium Feature 6 — Tasbeeh History & Analytics (Nur Gold)
+- On the Dhikr screen, add a "History" tab
+- Show a daily log of all dhikr sessions with timestamp, type, and count
+- Show weekly totals per dhikr type as a bar chart
+- Show an all-time total counter with a gold milestone badge every 10,000 (e.g., "🏆 50,000 tasbeeh completed")
+
+---
+
+## PART 3 — FREE FEATURE ADDITIONS
+
+These features are free for all users:
+
+1. **Morning & Evening Azkar** — The existing "Azkar Collections" section on Dhikr screen should be fully built out:
+   - Morning Azkar: 12 authentic adhkar with Arabic text, transliteration, translation, and repeat count
+   - Evening Azkar: 12 adhkar
+   - After Salah Azkar: the classic SubhanAllah x33, Alhamdulillah x33, Allahu Akbar x34 sequence — auto-advances to the next when target reached
+   - Each collection opens a guided mode: one dhikr at a time, auto-advance with a satisfying completion chime sound (use AudioContext API to generate a soft bell tone)
+
+2. **Islamic Date Display** — The hijri date already shown on the home and prayers screen should be calculated dynamically (not hardcoded). Use the `toLocaleDateString` with `islamic-umalqura` calendar or implement the Umm al-Qura calculation.
+
+3. **Prayer Times API** — Replace any hardcoded prayer times with live data from `https://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=2` — called once daily and cached in localStorage with the date as key.
+
+4. **Surah of the Day** — On the home screen, add a card showing a random short ayah (from the last Juz) each day. Fetch from `https://api.alquran.cloud/v1/ayah/{number}/editions/quran-uthmani,en.asad` and display Arabic + English translation.
+
+5. **Ramadan Mode** — The app already detects Ramadan (as seen on the home screen). Enhance it:
+   - Show Suhoor time (same as Fajr) and Iftar time (same as Maghrib) prominently on home screen
+   - Add a countdown timer to the next Suhoor or Iftar
+   - Add a Ramadan progress bar (Day X of 30)
+   - Show "Ramadan Mubarak" banner with a subtle animated starfield background
+
+6. **Dua Corner** — Add a "Duas" section in the More tab with categorised duas:
+   - Categories: Morning, Evening, Before/After Eating, Travelling, Sleep, Entering/Leaving Home, Mosque
+   - Each dua: Arabic, transliteration, translation, source (Quran/Hadith reference)
+   - Favourite button (star icon) — saves to `nurFavouriteDuas` in localStorage
+   - A "Favourites" tab showing starred duas
+
+---
+
+## PART 4 — DESIGN POLISH
+
+1. **Loading States** — Add shimmer skeleton loaders (animated grey bars matching the card layout) for any section that fetches data (prayer times, Surah of the day, etc.)
+
+2. **Error States** — If any API call fails, show an inline error card with a retry button. Never show raw error messages.
+
+3. **Empty States** — For sections with no data (e.g., 0 day streak, empty dhikr history), show a warm illustrated empty state with a motivational Islamic quote and a CTA.
+
+4. **Micro-animations**:
+   - Counter numbers should use a rolling/flip animation when incrementing
+   - Progress bars should animate from 0 to their value on screen entry
+   - Tab switches should have the active indicator slide horizontally
+   - The prayer countdown timer (50m 51s on home) should tick in real-time every second
+
+5. **Typography** — Import and use "Amiri" from Google Fonts for all Arabic text (`font-family: 'Amiri', serif`). Keep the existing sans-serif for English UI. Ensure Arabic text is right-to-left (`dir="rtl"`) and appropriately sized (Arabic script needs ~20% larger size than Latin for equivalent visual weight).
+
+6. **Accessibility**:
+   - All interactive elements must have `aria-label` attributes
+   - Sufficient colour contrast (gold on dark meets AA)
+   - Screen reader announcements when counter increments
+   - Keyboard navigation support
+
+---
+
+## IMPLEMENTATION NOTES
+
+- Store all user data in localStorage with `nur` prefix to avoid collisions
+- All API calls should be debounced and cached — never call the same endpoint twice in the same day
+- The app must work as a single HTML file with embedded CSS and JS (no build process)
+- Maintain the existing dark gold design language: background `#171614`, surface `#1c1b19`, gold accent `#D4A017`, white text `#cdccca`
+- Gold gradient: `linear-gradient(135deg, #D4A017, #F5C842)`
+- All new bottom nav additions should use a "More" submenu rather than adding extra tabs (keep max 5 tabs)
+- Ensure everything works offline after first load via Service Worker caching

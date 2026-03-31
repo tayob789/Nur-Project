@@ -19,3 +19,17 @@ export function getRamadanInfo(): { inRamadan: boolean; daysUntil: number; dayOf
   const daysUntil = Math.ceil((RAMADAN_START.getTime() - now.getTime()) / 86400000);
   return { inRamadan: false, daysUntil: Math.max(0, daysUntil), dayOf: 0 };
 }
+
+export function getIslamicGreeting(): { short: string; full: string } {
+  const h = new Date().getHours();
+  let short: string;
+  if (h >= 0 && h < 12) {
+    short = '\u0627\u0644\u0633\u064e\u0651\u0644\u0627\u0645\u064f \u0639\u0644\u064e\u064a\u0643\u064f\u0645 \u2600\ufe0f';
+  } else if (h >= 12 && h < 18) {
+    short = '\u0627\u0644\u0633\u064e\u0651\u0644\u0627\u0645\u064f \u0639\u0644\u064e\u064a\u0643\u064f\u0645 \ud83c\udf24\ufe0f';
+  } else {
+    short = '\u0627\u0644\u0633\u064e\u0651\u0644\u0627\u0645\u064f \u0639\u0644\u064e\u064a\u0643\u064f\u0645 \ud83c\udf19';
+  }
+  const full = '\u0627\u0644\u0633\u064e\u0651\u0644\u0627\u0645\u064f \u0639\u0644\u064e\u064a\u0643\u064f\u0645\u0652 \u0648\u064e\u0631\u064e\u062d\u0652\u0645\u064e\u0629\u064f \u0627\u0644\u0644\u0651\u064e\u0647\u0650 \u0648\u064e\u0628\u064e\u0631\u064e\u0643\u064e\u0627\u062a\u064f\u0647\u064f';
+  return { short, full };
+}
