@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GeometricBackground } from '@/components/GeometricBackground';
 import { theme } from '@/constants/colors';
-import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { usePrayers } from '@/context/PrayerContext';
 
 const MESSAGES = [
   'Begin your day with intention.',
@@ -36,7 +36,7 @@ const SUNNAH = [
 
 export default function PrayersScreen() {
   const insets = useSafeAreaInsets();
-  const { prayers, nextPrayer, loading, error, hijriDate, togglePrayer } = usePrayerTimes();
+  const { prayers, nextPrayer, loading, error, hijriDate, togglePrayer } = usePrayers();
   const [sunnahExpanded, setSunnahExpanded] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -81,7 +81,7 @@ export default function PrayersScreen() {
             </View>
             <View style={s.summaryText}>
               <Text style={s.summaryMsg}>{MESSAGES[done]}</Text>
-              {done < 5 && <Text style={s.summaryRemain}>{5 - done} remaining</Text>}
+              {done < 5 && <Text style={s.summaryRemain}>{5 - done} remaining today</Text>}
             </View>
           </View>
 
@@ -124,7 +124,6 @@ export default function PrayersScreen() {
             );
           })}
 
-          {/* Sunnah Section */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setSunnahExpanded(!sunnahExpanded)}

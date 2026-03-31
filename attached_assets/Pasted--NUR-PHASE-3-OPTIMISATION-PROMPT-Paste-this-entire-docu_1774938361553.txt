@@ -1,0 +1,1034 @@
+# NUR — PHASE 3 OPTIMISATION PROMPT
+# Paste this entire document into Replit AI.
+# This builds on top of the existing working app shown in the screenshot.
+# Do not rebuild things that already work — only fix, enhance, and add.
+
+---
+
+## CURRENT STATE (from screenshot)
+
+Working:
+- Home screen with greeting, Hijri date, avatar
+- Live countdown (44m 54s ticking)
+- Prayer timeline arc inside next prayer card
+- Prayer strip showing all 5 times
+- Prayers Today + Quran This Week goal cards
+- Streak section with day dots
+- Verse of the Day card with Arabic text
+- 5-tab navigation: Home, Prayers, Quran, Dhikr, More, Zakat
+
+Needs fixing:
+1. The "zakat" tab is a 6th tab that's broken/squished — the nav should be exactly 5 tabs
+2. Prayers Today (0/5) is not connected to the prayer strip — tapping prayers should update the counter
+3. Streak shows 0 days with empty dots — not persisting state between sessions
+4. Geometric background pattern not visible
+5. Cards need more visual depth — gradients and gold glow
+6. Arabic verse text should be larger and use a proper Arabic font
+7. The verse card background is too green/teal — should match the dark gold aesthetic
+
+---
+
+## FIX 1 — NAVIGATION (critical)
+
+The bottom nav must be exactly 5 tabs. Remove the broken "zakat" 6th tab.
+Zakat moves inside the "More" screen as a feature card.
+
+```typescript
+// App.tsx — correct 5-tab structure
+<Tab.Navigator>
+  <Tab.Screen name="Home"    component={HomeScreen}    />
+  <Tab.Screen name="Prayers" component={PrayersScreen} />
+  <Tab.Screen name="Quran"   component={QuranScreen}   />
+  <Tab.Screen name="Dhikr"   component={DhikrScreen}   />
+  <Tab.Screen name="More"    component={MoreScreen}    />
+</Tab.Navigator>
+```
+
+Tab icons (use these exact icon names or SVG paths):
+- Home:    house/home icon
+- Prayers: crescent moon icon  
+- Quran:   open book icon
+- Dhikr:   circle with dots (tasbeeh) icon
+- More:    grid/apps icon
+
+---
+
+## FIX 2 — CONNECT PRAYER STATE GLOBALLY
+
+Currently prayers are tracked in local screen state so HomeScreen and PrayersScreen are out of sync.
+
+**Create a global prayer state using React Context:**
+
+```typescript
+// src/context/PrayerContext.tsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface PrayerLog {
+  name: string;
+  done: boolean;
+  doneAt: string | null;
+}
+
+interface PrayerContextType {
+  todaysPrayers: PrayerLog[];
+  togglePrayer: (name: string) => void;
+  completedCount: number;
+  streak: number;
+}
+
+const PrayerContext = createContext<PrayerContextType | null>(null);
+
+const PRAYER_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+export function PrayerProvider({ children }: { children: React.ReactNode }) {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const storageKey = `prayers_${today}`;
+
+  const [todaysPrayers, setTodaysPrayers] = useState<PrayerLog[]>(
+    PRAYER_NAMES.map(name => ({ name, done: false, doneAt: null }))
+  );
+  const [streak, setStreak] = useState(0);
+
+  // Load today's prayers from AsyncStorage on mount
+  useEffect(() => {
+    AsyncStorage.getItem(storageKey).then(val => {
+      if (val) setTodaysPrayers(JSON.parse(val));
+    });
+    calculateStreak();
+  }, []);
+
+  // Save to AsyncStorage whenever prayers change
+  useEffect(() => {
+    AsyncStorage.setItem(storageKey, JSON.stringify(todaysPrayers));
+  }, [todaysPrayers]);
+
+  const togglePrayer = (name: string) => {
+    setTodaysPrayers(prev =>
+      prev.map(p =>
+        p.name === name
+          ? { ...p, done: !p.done, doneAt: !p.done ? new Date().toISOString() : null }
+          : p
+      )
+    );
+  };
+
+  // Calculate streak: how many consecutive days had all 5 prayers completed
+  const calculateStreak = async () => {
+    let count = 0;
+    const checkDate = new Date();
+    checkDate.setDate(checkDate.getDate() - 1); // start from yesterday
+
+    for (let i = 0; i < 365; i++) {
+      const dateKey = `prayers_${checkDate.toISOString().split('T')[0]}`;
+      const val = await AsyncStorage.getItem(dateKey);
+      if (!val) break;
+      const logs: PrayerLog[] = JSON.parse(val);
+      const allDone = logs.every(p => p.done);
+      if (!allDone) break;
+      count++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    setStreak(count);
+  };
+
+  const completedCount = todaysPrayers.filter(p => p.done).length;
+
+  return (
+    <PrayerContext.Provider value={{ todaysPrayers, togglePrayer, completedCount, streak }}>
+      {children}
+    </PrayerContext.Provider>
+  );
+}
+
+export const usePrayers = () => {
+  const ctx = useContext(PrayerContext);
+  if (!ctx) throw new Error('usePrayers must be used within PrayerProvider');
+  return ctx;
+};
+```
+
+Install AsyncStorage:
+```powershell
+npx expo install @react-native-async-storage/async-storage
+```
+
+Wrap App.tsx:
+```typescript
+// App.tsx
+export default function App() {
+  return (
+    <PrayerProvider>
+      <NavigationContainer>
+        {/* tabs here */}
+      </NavigationContainer>
+    </PrayerProvider>
+  );
+}
+```
+
+Now both HomeScreen and PrayersScreen use `usePrayers()` — they always show the same state.
+
+---
+
+## FIX 3 — GEOMETRIC BACKGROUND PATTERN
+
+The pattern is not showing. Fix the implementation:
+
+```typescript
+// src/components/GeometricBackground.tsx
+import React from 'react';
+import { StyleSheet, View, Dimensions } from 'react-native';
+import Svg, { Path, Defs, Pattern, Rect, G } from 'react-native-svg';
+
+const { width, height } = Dimensions.get('screen');
+
+export function GeometricBackground() {
+  return (
+    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      <Svg
+        width={width}
+        height={height}
+        style={StyleSheet.absoluteFillObject}
+      >
+        <Defs>
+          <Pattern
+            id="islamicPattern"
+            x="0"
+            y="0"
+            width="80"
+            height="80"
+            patternUnits="userSpaceOnUse"
+          >
+            {/* 8-pointed Islamic star */}
+            <G opacity="0.045">
+              <Path
+                d="M40 8 L44 28 L64 24 L50 38 L64 56 L44 52 L40 72 L36 52 L16 56 L30 38 L16 24 L36 28 Z"
+                stroke="#c9a84c"
+                strokeWidth="0.6"
+                fill="none"
+              />
+              <Path
+                d="M40 20 L42 30 L52 28 L46 36 L52 46 L42 44 L40 54 L38 44 L28 46 L34 36 L28 28 L38 30 Z"
+                stroke="#c9a84c"
+                strokeWidth="0.4"
+                fill="none"
+                opacity="0.5"
+              />
+            </G>
+          </Pattern>
+        </Defs>
+        <Rect width={width} height={height} fill="url(#islamicPattern)" />
+      </Svg>
+    </View>
+  );
+}
+```
+
+Use it in every screen as the FIRST child of SafeAreaView:
+```typescript
+<SafeAreaView style={s.safe}>
+  <GeometricBackground />
+  <ScrollView>
+    {/* screen content */}
+  </ScrollView>
+</SafeAreaView>
+```
+
+---
+
+## FIX 4 — VERSE CARD REDESIGN
+
+The current verse card is too green. Redesign it:
+
+```typescript
+// Verse of the Day card — correct styling
+<View style={s.verseCard}>
+  {/* Subtle gold top border line */}
+  <View style={s.verseBorderTop} />
+  
+  <Text style={s.verseEyebrow}>VERSE OF THE DAY</Text>
+  
+  {/* Large Arabic text — centred, right-to-left */}
+  <Text style={s.verseArabic}>
+    {verse.arabic}
+  </Text>
+  
+  {/* Translation in italic */}
+  <Text style={s.verseTranslation}>
+    "{verse.translation}"
+  </Text>
+  
+  {/* Reference in gold */}
+  <Text style={s.verseRef}>{verse.reference}</Text>
+</View>
+
+// Styles:
+verseCard: {
+  marginHorizontal: 20,
+  marginTop: 16,
+  backgroundColor: '#1a1608',       // warm dark, not teal
+  borderWidth: 1,
+  borderColor: 'rgba(201,168,76,0.2)',
+  borderRadius: 20,
+  padding: 24,
+  alignItems: 'center',
+},
+verseBorderTop: {
+  position: 'absolute',
+  top: 0, left: 40, right: 40,
+  height: 1,
+  backgroundColor: '#c9a84c',
+  opacity: 0.4,
+  borderRadius: 1,
+},
+verseEyebrow: {
+  fontSize: 10,
+  color: '#c9a84c',
+  letterSpacing: 2,
+  fontWeight: '700',
+  marginBottom: 20,
+  opacity: 0.8,
+},
+verseArabic: {
+  fontSize: 28,                      // bigger
+  color: '#e8c97a',
+  textAlign: 'center',
+  writingDirection: 'rtl',
+  lineHeight: 48,
+  marginBottom: 16,
+  fontFamily: 'DMSerifDisplay_400Regular', // or Amiri if loaded
+},
+verseTranslation: {
+  fontSize: 15,
+  color: '#ede8df',
+  textAlign: 'center',
+  fontStyle: 'italic',
+  lineHeight: 24,
+  marginBottom: 12,
+  opacity: 0.85,
+},
+verseRef: {
+  fontSize: 12,
+  color: '#c9a84c',
+  opacity: 0.7,
+},
+```
+
+---
+
+## FIX 5 — CARD DEPTH AND GLOW
+
+Add LinearGradient and gold glow to the Next Prayer card:
+
+```typescript
+// Install if not already done:
+// npx expo install expo-linear-gradient
+
+import { LinearGradient } from 'expo-linear-gradient';
+
+// Replace the next prayer card View with:
+<LinearGradient
+  colors={['#1e1a0a', '#181410', '#141210']}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  style={[s.nextCard, s.nextCardGlow]}
+>
+  {/* card content */}
+</LinearGradient>
+
+// Styles:
+nextCard: {
+  marginHorizontal: 20,
+  marginTop: 16,
+  borderWidth: 1,
+  borderColor: 'rgba(201,168,76,0.3)',
+  borderRadius: 20,
+  padding: 20,
+},
+nextCardGlow: {
+  shadowColor: '#c9a84c',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.15,
+  shadowRadius: 20,
+  elevation: 8,
+},
+```
+
+---
+
+## ENHANCEMENT 1 — HADITH OF THE DAY CARD
+
+Add below the Verse card on HomeScreen:
+
+```typescript
+// src/data/hadith.ts — create this file with 20 hadith
+export const HADITH = [
+  {
+    text: 'The most beloved deeds to Allah are those done regularly, even if they are small.',
+    source: 'Sahih Bukhari',
+    narrator: 'Aisha (RA)'
+  },
+  {
+    text: 'None of you truly believes until he loves for his brother what he loves for himself.',
+    source: 'Sahih Bukhari',
+    narrator: 'Anas ibn Malik (RA)'
+  },
+  {
+    text: 'Speak good or remain silent.',
+    source: 'Sahih Bukhari',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  {
+    text: 'The strong person is not the one who can overpower others. The strong person is the one who controls himself when he is angry.',
+    source: 'Sahih Bukhari',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  {
+    text: 'Make things easy and do not make them difficult. Cheer people up and do not put them off.',
+    source: 'Sahih Bukhari',
+    narrator: 'Anas ibn Malik (RA)'
+  },
+  {
+    text: 'Whoever believes in Allah and the Last Day should speak good or remain silent.',
+    source: 'Sahih Bukhari',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  {
+    text: 'The best of people are those who are most beneficial to people.',
+    source: 'Al-Mu\'jam al-Awsat',
+    narrator: 'Jabir (RA)'
+  },
+  {
+    text: 'A Muslim is one from whose tongue and hand other Muslims are safe.',
+    source: 'Sahih Bukhari',
+    narrator: 'Abdullah ibn Amr (RA)'
+  },
+  {
+    text: 'Smiling at your brother is an act of charity.',
+    source: 'Tirmidhi',
+    narrator: 'Abu Dharr (RA)'
+  },
+  {
+    text: 'Allah does not look at your appearance or wealth, but He looks at your hearts and deeds.',
+    source: 'Sahih Muslim',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  {
+    text: 'Cleanliness is half of faith.',
+    source: 'Sahih Muslim',
+    narrator: 'Abu Malik al-Ash\'ari (RA)'
+  },
+  {
+    text: 'The best of you are those who learn the Quran and teach it.',
+    source: 'Sahih Bukhari',
+    narrator: 'Uthman ibn Affan (RA)'
+  },
+  {
+    text: 'Feed the hungry, visit the sick, and free the captive.',
+    source: 'Sahih Bukhari',
+    narrator: 'Abu Musa (RA)'
+  },
+  {
+    text: 'Do not be angry, and paradise is yours.',
+    source: 'Al-Mu\'jam al-Kabir',
+    narrator: 'A man (RA)'
+  },
+  {
+    text: 'Whoever removes a worldly grief from a believer, Allah will remove one of the griefs of the Day of Judgement from him.',
+    source: 'Sahih Muslim',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  {
+    text: 'The world is a prison for the believer and a paradise for the disbeliever.',
+    source: 'Sahih Muslim',
+    narrator: 'Abu Hurairah (RA)'
+  },
+  {
+    text: 'Actions are judged by intentions.',
+    source: 'Sahih Bukhari',
+    narrator: 'Umar ibn al-Khattab (RA)'
+  },
+  {
+    text: 'Every act of kindness is charity.',
+    source: 'Sahih Bukhari',
+    narrator: 'Jabir (RA)'
+  },
+  {
+    text: 'Seeking knowledge is an obligation upon every Muslim.',
+    source: 'Ibn Majah',
+    narrator: 'Anas ibn Malik (RA)'
+  },
+  {
+    text: 'The merciful are shown mercy by the Most Merciful. Show mercy to those on earth and the One in the heavens will show mercy to you.',
+    source: 'Tirmidhi',
+    narrator: 'Abdullah ibn Amr (RA)'
+  },
+];
+
+// Usage in HomeScreen — pick by day of year:
+const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+const todaysHadith = HADITH[dayOfYear % HADITH.length];
+```
+
+Hadith card styling:
+```typescript
+hadithCard: {
+  marginHorizontal: 20,
+  marginTop: 12,
+  backgroundColor: '#141210',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.07)',
+  borderRadius: 20,
+  padding: 20,
+},
+hadithPrefix: {
+  fontSize: 11,
+  color: '#c9a84c',
+  fontWeight: '700',
+  letterSpacing: 0.5,
+  marginBottom: 8,
+},
+hadithText: {
+  fontSize: 15,
+  color: '#ede8df',
+  lineHeight: 24,
+  fontStyle: 'italic',
+  marginBottom: 10,
+},
+hadithSource: {
+  fontSize: 11,
+  color: '#9c9488',
+},
+```
+
+---
+
+## ENHANCEMENT 2 — RAMADAN COUNTDOWN / SEASON CARD
+
+Add a contextual card that changes based on the Islamic season:
+
+```typescript
+// src/components/SeasonCard.tsx
+
+// Logic:
+// - If current Hijri month is Ramadan (month 9): show fasting times (sehri/iftar)
+// - If within 30 days of Ramadan: show "X days until Ramadan"
+// - If Dhul Hijjah first 10 days: show "The blessed 10 days"
+// - If Muharram: show "Islamic New Year"
+// - Otherwise: show a general Islamic reminder
+
+// For now hardcode a "days until Ramadan" card since Ramadan 2026 is approx March 18:
+const NEXT_RAMADAN = new Date('2026-03-18');
+const daysUntil = Math.ceil((NEXT_RAMADAN.getTime() - Date.now()) / 86400000);
+
+// Render:
+<LinearGradient
+  colors={['#1a0e0e', '#1c1210', '#141210']}
+  style={s.seasonCard}
+>
+  <Text style={s.seasonEyebrow}>COMING SOON</Text>
+  <Text style={s.seasonTitle}>Ramadan 2026</Text>
+  <Text style={s.seasonDays}>{daysUntil} days away</Text>
+  <Text style={s.seasonSub}>Begin your preparation now</Text>
+</LinearGradient>
+```
+
+---
+
+## ENHANCEMENT 3 — MORNING / EVENING GREETING
+
+Change the greeting based on time of day:
+
+```typescript
+// src/utils/greeting.ts
+export function getGreeting(): { arabic: string; english: string } {
+  const hour = new Date().getHours();
+  
+  if (hour >= 4 && hour < 7)   return { arabic: 'صباح الخير', english: 'Good morning' };
+  if (hour >= 7 && hour < 12)  return { arabic: 'أصبحنا وأصبح الملك لله', english: 'A blessed morning' };
+  if (hour >= 12 && hour < 15) return { arabic: 'انتهى الصباح', english: 'Good afternoon' };
+  if (hour >= 15 && hour < 18) return { arabic: 'مساء الخير', english: 'Good afternoon' };
+  if (hour >= 18 && hour < 21) return { arabic: 'مساء النور', english: 'Good evening' };
+  return { arabic: 'طاب ليلك', english: 'Good night' };
+}
+
+// Show in header:
+// Small gold text: time-appropriate Arabic phrase
+// Large bold: "Muhammad"  
+// Subtitle: Gregorian + Hijri date
+```
+
+---
+
+## ENHANCEMENT 4 — QURAN SCREEN OVERHAUL
+
+Current Quran screen needs these additions:
+
+### A. Reading session log
+```typescript
+// Instead of just a stepper, add a "Log reading session" flow:
+// 1. User taps "Log session"
+// 2. Bottom sheet appears with:
+//    - "From Surah __ Ayah __ to Surah __ Ayah __"  
+//    - Or simpler: "How many pages did you read?" with stepper
+// 3. Tap save → updates weekly total
+
+// For MVP: keep the simple stepper but auto-save to AsyncStorage
+```
+
+### B. Khatm progress ring
+```typescript
+// Show circular progress ring for current khatm
+// 604 pages total in Quran
+// Calculate total pages ever logged
+// totalPages % 604 = progress in current khatm
+// Math.floor(totalPages / 604) = completed khatms
+
+// Visual:
+// Large ring (120px diameter)
+// Gold stroke for progress
+// Centre text: "Khatm 2" or "First Khatm"
+// Below: "284 / 604 pages"
+```
+
+### C. 7-week reading calendar
+```typescript
+// GitHub-style contribution grid
+// 7 columns (days of week) × 7 rows (weeks)
+// Each cell: small square, coloured by reading activity
+//   - Gold: goal met (pages >= daily goal)
+//   - Teal: partial reading  
+//   - surface3: no reading
+//   - surface2: future date
+
+// Store daily reading in AsyncStorage:
+// key: `quran_${YYYY-MM-DD}`, value: pages read that day
+```
+
+---
+
+## ENHANCEMENT 5 — DHIKR SCREEN POLISH
+
+Current Dhikr screen needs:
+
+### A. Three-counter flow (SubhanAllah → Alhamdulillah → AllahuAkbar)
+```typescript
+const DHIKR_SEQUENCE = [
+  { arabic: 'سُبْحَانَ اللّٰهِ', transliteration: 'SubhanAllah', translation: 'Glory be to Allah', target: 33 },
+  { arabic: 'الْحَمْدُ لِلّٰهِ', transliteration: 'Alhamdulillah', translation: 'All praise be to Allah', target: 33 },
+  { arabic: 'اللّٰهُ أَكْبَرُ', transliteration: 'Allahu Akbar', translation: 'Allah is the Greatest', target: 34 },
+];
+
+// When user reaches target (33):
+// 1. Gold flash animation
+// 2. Haptic: Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+// 3. Auto-advance to next dhikr after 1.5 seconds
+// 4. When all 3 complete: show "Tasbih complete — 100 total" 
+//    with a celebratory but tasteful animation (gold glow pulse, not confetti)
+```
+
+### B. Custom counter
+```typescript
+// "Custom dhikr" option:
+// User types their own dhikr phrase
+// Sets custom target
+// Saves to AsyncStorage for reuse
+// Shows in "My Dhikr" section
+```
+
+### C. Azkar list with completion
+```typescript
+// Morning/Evening azkar:
+// Each item shows: Arabic + transliteration + translation + repeat count
+// User taps to mark done
+// "Morning Azkar" section shows: "7 / 12 complete"
+// Full completion: subtle gold celebration
+
+// Hardcode morning azkar:
+export const MORNING_AZKAR = [
+  {
+    arabic: 'أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ',
+    transliteration: 'Aoodhu billahi minash shaytanir rajeem',
+    translation: 'I seek refuge in Allah from the accursed devil',
+    count: 1,
+    source: 'Quran 16:98'
+  },
+  {
+    arabic: 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+    transliteration: 'Bismillahir rahmanir raheem',
+    translation: 'In the name of Allah, the Most Gracious, the Most Merciful',
+    count: 1,
+    source: 'Quran 1:1'
+  },
+  {
+    arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ وَالْحَمْدُ لِلَّهِ',
+    transliteration: 'Asbahna wa asbahal mulku lillahi walhamdulillah',
+    translation: 'We have reached the morning, and the dominion belongs to Allah. Praise be to Allah.',
+    count: 1,
+    source: 'Abu Dawud 5071'
+  },
+  {
+    arabic: 'اللَّهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا',
+    transliteration: 'Allahumma bika asbahna wa bika amsayna',
+    translation: 'O Allah, by Your leave we have reached the morning and by Your leave we reach the evening.',
+    count: 1,
+    source: 'Tirmidhi 3391'
+  },
+  {
+    arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+    transliteration: 'SubhanAllahi wa bihamdihi',
+    translation: 'Glory be to Allah and praise Him.',
+    count: 100,
+    source: 'Bukhari 6042'
+  },
+  // add 7 more morning azkar
+];
+
+export const EVENING_AZKAR = [
+  // similar structure, 11 items
+  // Replace "Asbahna" with "Amsayna" variants
+];
+```
+
+---
+
+## ENHANCEMENT 6 — MORE SCREEN FEATURE GRID
+
+Build the full More screen:
+
+```typescript
+// src/screens/MoreScreen.tsx
+
+const FEATURES = [
+  { id: 'qibla',    icon: '🧭', title: 'Qibla',          subtitle: 'Find direction',     screen: 'Qibla',    color: '#c9a84c' },
+  { id: 'calendar', icon: '📅', title: 'Islamic Calendar',subtitle: 'Hijri dates & events',screen: 'Calendar', color: '#5ab5a2' },
+  { id: 'names',    icon: '✨', title: '99 Names',        subtitle: 'Asma ul-Husna',      screen: 'Names',    color: '#c9a84c' },
+  { id: 'zakat',    icon: '💛', title: 'Zakat',           subtitle: 'Calculate obligation',screen: 'Zakat',    color: '#5ab5a2' },
+  { id: 'mosque',   icon: '🕌', title: 'Mosque Finder',   subtitle: 'Near you',           screen: 'Mosque',   color: '#c9a84c' },
+  { id: 'settings', icon: '⚙️', title: 'Settings',        subtitle: 'Account & prefs',    screen: 'Settings', color: '#9c9488' },
+];
+
+// Each card:
+// - Icon in a circle (gold or teal tinted background)
+// - Title bold
+// - Subtitle muted
+// - Arrow chevron right
+// - Tap navigates to that screen (use Stack navigator)
+
+// Layout: 2-column grid for top 4, full-width for settings
+
+// Also show at bottom:
+// "Ramadan 2026 — X days away" banner
+// App version: "Nur v0.1.0 — Privacy first, always"
+```
+
+Stack navigator setup for More:
+```typescript
+// src/navigation/MoreStack.tsx
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import MoreScreen from '../screens/MoreScreen';
+import QiblaScreen from '../screens/QiblaScreen';
+import IslamicCalendarScreen from '../screens/IslamicCalendarScreen';
+import NamesOfAllahScreen from '../screens/NamesOfAllahScreen';
+import ZakatScreen from '../screens/ZakatScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+
+const Stack = createNativeStackNavigator();
+
+export function MoreStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MoreHome"  component={MoreScreen} />
+      <Stack.Screen name="Qibla"     component={QiblaScreen} />
+      <Stack.Screen name="Calendar"  component={IslamicCalendarScreen} />
+      <Stack.Screen name="Names"     component={NamesOfAllahScreen} />
+      <Stack.Screen name="Zakat"     component={ZakatScreen} />
+      <Stack.Screen name="Settings"  component={SettingsScreen} />
+    </Stack.Navigator>
+  );
+}
+```
+
+Install:
+```powershell
+npx expo install @react-navigation/native-stack
+```
+
+---
+
+## ENHANCEMENT 7 — QIBLA COMPASS SCREEN
+
+```typescript
+// src/screens/QiblaScreen.tsx
+import { Magnetometer } from 'expo-sensors';
+import * as Location from 'expo-location';
+import Svg, { Circle, Line, Path, Text as SvgText, G } from 'react-native-svg';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
+// Mecca coordinates
+const MECCA_LAT = 21.4225;
+const MECCA_LNG = 39.8262;
+
+function calculateQiblaAngle(userLat: number, userLng: number): number {
+  const φ1 = userLat * (Math.PI / 180);
+  const φ2 = MECCA_LAT * (Math.PI / 180);
+  const Δλ = (MECCA_LNG - userLng) * (Math.PI / 180);
+  const x = Math.cos(φ2) * Math.sin(Δλ);
+  const y = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return ((Math.atan2(x, y) * (180 / Math.PI)) + 360) % 360;
+}
+
+function getDistanceToMecca(lat: number, lng: number): number {
+  const R = 6371; // km
+  const φ1 = lat * Math.PI / 180;
+  const φ2 = MECCA_LAT * Math.PI / 180;
+  const Δφ = (MECCA_LAT - lat) * Math.PI / 180;
+  const Δλ = (MECCA_LNG - lng) * Math.PI / 180;
+  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+// Screen layout:
+// - "Qibla" header with back button
+// - Large circular compass (220px diameter) drawn with react-native-svg
+// - Compass rose with N/S/E/W labels
+// - Gold needle pointing to Qibla direction
+// - Rotates smoothly using Animated.View + magnetometer
+// - Below compass: "X km from Mecca"
+// - "Hold phone flat and level" instruction
+// - "Permission required" state if location denied
+```
+
+---
+
+## ENHANCEMENT 8 — SETTINGS SCREEN
+
+```typescript
+// src/screens/SettingsScreen.tsx
+
+// Sections:
+
+// 1. PROFILE
+// - Display name (editable)  
+// - Email (read-only)
+
+// 2. PRAYER SETTINGS
+// - Calculation method: picker (Muslim World League / ISNA / Egypt / Makkah)
+// - Asr method: Shafi'i / Hanafi
+// - Location: auto (GPS) / manual city entry
+
+// 3. NOTIFICATIONS  
+// - Toggle for each prayer
+// - Minutes before prayer: 5 / 10 / 15 / 30
+// - Morning azkar reminder: on/off, time picker
+// - Evening azkar reminder: on/off, time picker
+
+// 4. QURAN
+// - Weekly page goal (stepper: 7 / 14 / 21 / 35 / 70)
+// - Daily page goal (derived from weekly)
+
+// 5. ABOUT
+// - App version
+// - Privacy policy (link)
+// - "Nur does not track you, sell your data, or serve ads. Ever."
+//   → show this as a gold-bordered statement card, not just text
+
+// 6. ACCOUNT (if auth added)
+// - Sign out
+// - Delete account (with confirmation alert)
+
+// Privacy statement card style:
+privacyCard: {
+  margin: 20,
+  padding: 20,
+  borderWidth: 1,
+  borderColor: 'rgba(201,168,76,0.3)',
+  borderRadius: 16,
+  backgroundColor: 'rgba(201,168,76,0.05)',
+},
+privacyText: {
+  fontSize: 14,
+  color: '#ede8df',
+  lineHeight: 22,
+  textAlign: 'center',
+  fontStyle: 'italic',
+},
+```
+
+---
+
+## ENHANCEMENT 9 — ANIMATIONS WITH REANIMATED
+
+Add micro-animations to make the app feel alive:
+
+```typescript
+// Install if not done:
+// npx expo install react-native-reanimated
+// Add to babel.config.js: plugins: ['react-native-reanimated/plugin']
+
+// 1. Prayer row tap animation
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming } from 'react-native-reanimated';
+
+function AnimatedPrayerRow({ prayer, onToggle }) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  
+  const handlePress = () => {
+    scale.value = withSequence(
+      withTiming(0.96, { duration: 80 }),
+      withSpring(1, { damping: 12 })
+    );
+    onToggle(prayer.name);
+  };
+  
+  return (
+    <Animated.View style={animStyle}>
+      <TouchableOpacity onPress={handlePress} activeOpacity={1}>
+        {/* prayer row content */}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// 2. Dhikr counter tap pulse
+const counterScale = useSharedValue(1);
+const counterStyle = useAnimatedStyle(() => ({ transform: [{ scale: counterScale.value }] }));
+
+const handleCount = () => {
+  counterScale.value = withSequence(
+    withTiming(0.94, { duration: 60 }),
+    withSpring(1, { damping: 10, stiffness: 200 })
+  );
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  setCount(c => c + 1);
+};
+
+// 3. Goal completion flash
+// When prayers = 5/5 or pages = goal:
+// Flash a gold border animation on the card
+const borderOpacity = useSharedValue(0);
+// When complete: borderOpacity → 1 → 0 over 1s
+```
+
+---
+
+## ENHANCEMENT 10 — MOSQUE FINDER SCREEN (basic)
+
+```typescript
+// src/screens/MosqueFinder.tsx
+// Uses expo-location to get current position
+// Opens Google Maps search for "mosque near me" via Linking
+
+import { Linking } from 'react-native';
+import * as Location from 'expo-location';
+
+async function findNearbyMosques() {
+  const { coords } = await Location.getCurrentPositionAsync();
+  const url = `https://www.google.com/maps/search/mosque/@${coords.latitude},${coords.longitude},14z`;
+  Linking.openURL(url);
+}
+
+// Simple screen:
+// - "Find a mosque near you" heading
+// - Location permission request
+// - "Open in Maps" button (gold primary button)
+// - Note: "Results provided by Google Maps"
+// - Future: embed a proper mosque directory API
+```
+
+---
+
+## PACKAGES SUMMARY — INSTALL ALL AT ONCE
+
+Run this single PowerShell command:
+
+```powershell
+npx expo install @react-native-async-storage/async-storage expo-linear-gradient react-native-svg expo-haptics expo-sensors react-native-reanimated @expo-google-fonts/dm-serif-display @expo-google-fonts/dm-sans @expo-google-fonts/amiri expo-font @react-navigation/native-stack
+```
+
+Then update babel.config.js:
+```javascript
+module.exports = function(api) {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: ['react-native-reanimated/plugin'],
+  };
+};
+```
+
+After updating babel.config.js, clear the Expo cache:
+```powershell
+npx expo start --clear
+```
+
+---
+
+## BUILD ORDER — DO THESE IN SEQUENCE
+
+1. Fix navigation → exactly 5 tabs, remove broken Zakat 6th tab
+2. Install all packages (single command above)
+3. Create PrayerContext → global prayer state
+4. Fix GeometricBackground → visible pattern on all screens
+5. Fix Verse card → warm dark background, larger Arabic text
+6. Add LinearGradient to Next Prayer card with gold glow
+7. Add Hadith of the Day card to HomeScreen
+8. Add Season/Ramadan countdown card
+9. Add time-aware greeting
+10. Build MoreStack navigator
+11. Build Settings screen
+12. Build Qibla compass
+13. Add Reanimated animations to prayer rows and Dhikr counter
+14. Polish Quran screen with khatm ring
+15. Polish Dhikr screen with three-counter sequence and azkar list
+
+---
+
+## DESIGN RULES — NON-NEGOTIABLE
+
+- Every screen: GeometricBackground as first child
+- Every hero card: LinearGradient + gold glow shadow
+- All Arabic text: writingDirection: 'rtl', textAlign: 'center'
+- All Arabic text: fontSize minimum 24px, colour #e8c97a (goldLight)
+- No colour hardcoded outside theme/index.ts (except in data files)
+- No red error states — use amber (#d4870a) for warnings, muted text for errors
+- No confetti, no badges, no gamification points
+- No "Made with Replit" banner — remove it from app.json or Replit settings
+- Haptic feedback on every tap of prayer rows, dhikr counter, and primary buttons
+- StatusBar: always light-content (white text on dark bg)
+- All screens need SafeAreaView as root element
+
+---
+
+## WHAT NOT TO TOUCH
+
+These are working correctly — do not modify them unless fixing a bug:
+- Aladhan API integration and prayer time fetching
+- Live countdown hook (useCountdown)
+- Prayer timeline arc component
+- Hijri date display
+- Prayer strip on home screen
+
+---
+
+## AFTER THIS PHASE IS COMPLETE
+
+The app will have:
+- 5 clean tabs with proper navigation
+- Global prayer state that persists between sessions
+- Geometric pattern background on all screens  
+- Verse + Hadith of the day
+- Working Dhikr counter with azkar
+- Qibla compass
+- Islamic calendar
+- 99 Names of Allah
+- Zakat calculator (in More)
+- Settings screen
+- Mosque finder (basic)
+- Smooth animations throughout
+- Haptic feedback
+
+That is a complete v1 Islamic app that competes directly with Muslim Pro on features while being cleaner, faster, and more trustworthy. The next phase after this will be user accounts (Supabase auth) and the subscription paywall (RevenueCat).
+
+Show me the full code for every file you create or modify. Do not summarise.

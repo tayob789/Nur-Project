@@ -6,7 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GeometricBackground } from '@/components/GeometricBackground';
 import { theme } from '@/constants/colors';
-import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { usePrayers } from '@/context/PrayerContext';
+import { getRamadanInfo } from '@/utils/greeting';
+
+const ramadan = getRamadanInfo();
 
 interface FeatureCardProps {
   icon: string;
@@ -30,7 +33,7 @@ function FeatureCard({ icon, label, subtitle, color, onPress }: FeatureCardProps
 
 export default function MoreScreen() {
   const insets = useSafeAreaInsets();
-  const { prayers } = usePrayerTimes();
+  const { prayers } = usePrayers();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start(); }, []);
 
@@ -58,27 +61,48 @@ export default function MoreScreen() {
             <FeatureCard icon="calendar" label="Calendar" subtitle="Islamic dates" color={theme.colors.teal} onPress={() => router.push('/(tabs)/(more)/calendar')} />
             <FeatureCard icon="star" label="99 Names" subtitle="Asma ul-Husna" color={theme.colors.goldLight} onPress={() => router.push('/(tabs)/(more)/names')} />
             <FeatureCard icon="percent" label="Zakat" subtitle="Calculate now" color={theme.colors.tealLight} onPress={() => router.push('/(tabs)/(more)/zakat')} />
+            <FeatureCard icon="map-pin" label="Mosques" subtitle="Near you" color={theme.colors.gold} onPress={() => router.push('/(tabs)/(more)/mosque')} />
+            <FeatureCard icon="settings" label="Settings" subtitle="Preferences" color={theme.colors.text2} onPress={() => router.push('/(tabs)/(more)/settings')} />
           </View>
 
-          {/* Sehri / Iftar (based on Fajr / Maghrib) */}
-          {(fajr || maghrib) && (
-            <View style={s.ramadanCard}>
-              <Text style={s.ramadanTitle}>Fasting Times</Text>
-              <View style={s.fastRow}>
-                <View style={s.fastItem}>
-                  <Text style={s.fastLabel}>Sehri ends</Text>
-                  <Text style={s.fastTime}>{fajr?.time ?? '--:--'}</Text>
+          {/* Ramadan Banner */}
+          {ramadan.inRamadan ? (
+            <View style={s.ramadanBanner}>
+              <Text style={s.ramadanTitle}>Ramadan Mubarak — Day {ramadan.dayOf}</Text>
+              {(fajr || maghrib) && (
+                <View style={s.fastRow}>
+                  <View style={s.fastItem}>
+                    <Text style={s.fastLabel}>Sehri ends</Text>
+                    <Text style={s.fastTime}>{fajr?.time ?? '--:--'}</Text>
+                  </View>
+                  <View style={s.fastDivider} />
+                  <View style={s.fastItem}>
+                    <Text style={s.fastLabel}>Iftar</Text>
+                    <Text style={[s.fastTime, { color: theme.colors.tealLight }]}>{maghrib?.time ?? '--:--'}</Text>
+                  </View>
                 </View>
-                <View style={s.fastDivider} />
-                <View style={s.fastItem}>
-                  <Text style={s.fastLabel}>Iftar</Text>
-                  <Text style={[s.fastTime, { color: theme.colors.tealLight }]}>{maghrib?.time ?? '--:--'}</Text>
+              )}
+            </View>
+          ) : (
+            (fajr || maghrib) ? (
+              <View style={s.ramadanBanner}>
+                <Text style={s.ramadanTitle}>Fasting Times</Text>
+                <View style={s.fastRow}>
+                  <View style={s.fastItem}>
+                    <Text style={s.fastLabel}>Sehri ends</Text>
+                    <Text style={s.fastTime}>{fajr?.time ?? '--:--'}</Text>
+                  </View>
+                  <View style={s.fastDivider} />
+                  <View style={s.fastItem}>
+                    <Text style={s.fastLabel}>Iftar</Text>
+                    <Text style={[s.fastTime, { color: theme.colors.tealLight }]}>{maghrib?.time ?? '--:--'}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            ) : null
           )}
 
-          {/* About / Privacy */}
+          {/* Privacy */}
           <View style={s.privacyCard}>
             <Feather name="shield" size={18} color={theme.colors.teal} />
             <View style={{ flex: 1 }}>
@@ -109,8 +133,8 @@ const s = StyleSheet.create({
   cardIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   cardLabel: { fontSize: 15, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
   cardSub: { fontSize: 11, color: theme.colors.text3 },
-  ramadanCard: { backgroundColor: theme.colors.surface, borderRadius: 18, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: theme.colors.border },
-  ramadanTitle: { fontSize: 13, fontWeight: '600', color: theme.colors.gold, marginBottom: 14, letterSpacing: 1 },
+  ramadanBanner: { backgroundColor: theme.colors.surface, borderRadius: 18, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(201,168,76,0.2)' },
+  ramadanTitle: { fontSize: 13, fontWeight: '600', color: theme.colors.gold, marginBottom: 14, letterSpacing: 0.5 },
   fastRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
   fastItem: { alignItems: 'center' },
   fastLabel: { fontSize: 11, color: theme.colors.text2, marginBottom: 4 },
