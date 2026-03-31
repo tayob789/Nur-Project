@@ -107,9 +107,6 @@ export default function HomeScreen() {
                 {hijriDate ? ` · ${hijriDate}` : ''}
               </Text>
             </View>
-            <View style={s.avatar}>
-              <Text style={s.avatarText}>{'\u0645'}</Text>
-            </View>
           </View>
 
           {/* Ramadan Card */}
@@ -269,9 +266,6 @@ const s = StyleSheet.create({
   },
   name: { fontSize: 26, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
   subdate: { fontSize: 12, color: theme.colors.text2 },
-  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: theme.colors.gold, backgroundColor: theme.colors.goldDim, justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
-  avatarText: { fontSize: 22, color: theme.colors.gold, fontFamily: 'Amiri_400Regular' },
-
   ramadanCard: { borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)', alignItems: 'center' },
   ramadanEyebrow: { fontSize: 9, letterSpacing: 2.5, color: theme.colors.gold, fontWeight: '700', marginBottom: 6, opacity: 0.8 },
   ramadanDay: { fontSize: 20, fontWeight: '800', color: theme.colors.goldLight, marginBottom: 4 },
