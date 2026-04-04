@@ -3,6 +3,9 @@ import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { normalizeTimingsRecord, readStoredPrayerCalcSettings } from '@/constants/prayerSettings';
+import { parseHijriDisplayString } from '@/utils/hijriParse';
+
 export interface Prayer {
   name: string;
   arabic: string;
@@ -18,6 +21,10 @@ export interface PrayerTimesState {
   loading: boolean;
   error: string | null;
   hijriDate: string;
+  /** 1–12 from API; 0 if unknown (e.g. old cache). */
+  hijriMonth: number;
+  /** 1–30 from API; 0 if unknown. */
+  hijriDay: number;
   gregorianDate: string;
   refresh: () => void;
   togglePrayer: (index: number) => void;
@@ -69,6 +76,8 @@ export function usePrayerTimes(): PrayerTimesState {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hijriDate, setHijriDate] = useState('');
+  const [hijriMonth, setHijriMonth] = useState(0);
+  const [hijriDay, setHijriDay] = useState(0);
   const [gregorianDate, setGregorianDate] = useState('');
   const [countdown, setCountdown] = useState('');
   const [nextPrayer, setNextPrayer] = useState<Prayer | null>(null);
@@ -103,19 +112,30 @@ export function usePrayerTimes(): PrayerTimesState {
     setLoading(true);
     setError(null);
     try {
+      const { method: calcMethod, school: asrSchool } = await readStoredPrayerCalcSettings();
       const todayKey = getTodayKey();
-      const cached = await AsyncStorage.getItem(`prayer_times_${todayKey}`);
+      const cacheKey = `prayer_times_${todayKey}_${calcMethod}_${asrSchool}`;
+      const cached = await AsyncStorage.getItem(cacheKey);
       const doneState = await loadDoneState();
 
       let timings: Record<string, string> = {};
       let hijri = '';
       let gregorian = '';
+      let hMonth = 0;
+      let hDay = 0;
 
       if (cached) {
         const parsed = JSON.parse(cached);
-        timings = parsed.timings;
+        timings = normalizeTimingsRecord(parsed.timings ?? {});
         hijri = parsed.hijri;
         gregorian = parsed.gregorian;
+        hMonth = typeof parsed.hijriMonth === 'number' ? parsed.hijriMonth : 0;
+        hDay = typeof parsed.hijriDay === 'number' ? parsed.hijriDay : 0;
+        if ((hMonth === 0 || hDay === 0) && hijri) {
+          const parsedDisplay = parseHijriDisplayString(hijri);
+          if (parsedDisplay.month > 0) hMonth = parsedDisplay.month;
+          if (parsedDisplay.day > 0) hDay = parsedDisplay.day;
+        }
       } else {
         let lat = 51.5074;
         let lng = -0.1278;
@@ -141,16 +161,23 @@ export function usePrayerTimes(): PrayerTimesState {
 
         const timestamp = Math.floor(Date.now() / 1000);
         const resp = await fetch(
-          `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${lat}&longitude=${lng}&method=2`
+          `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${lat}&longitude=${lng}&method=${calcMethod}&school=${asrSchool}`
         );
         const data = await resp.json();
-        timings = data.data.timings;
+        timings = normalizeTimingsRecord(data.data.timings ?? {});
 
         const dateObj = data.data.date;
         hijri = `${dateObj.hijri.day} ${dateObj.hijri.month.en} ${dateObj.hijri.year} AH`;
         gregorian = dateObj.gregorian.date;
+        hMonth = parseInt(String(dateObj.hijri.month.number), 10);
+        hDay = parseInt(String(dateObj.hijri.day), 10);
+        if (!Number.isFinite(hMonth)) hMonth = 0;
+        if (!Number.isFinite(hDay)) hDay = 0;
 
-        await AsyncStorage.setItem(`prayer_times_${todayKey}`, JSON.stringify({ timings, hijri, gregorian }));
+        await AsyncStorage.setItem(
+          cacheKey,
+          JSON.stringify({ timings, hijri, gregorian, hijriMonth: hMonth, hijriDay: hDay }),
+        );
       }
 
       const builtPrayers: Prayer[] = PRAYER_NAMES.map((p, i) => ({
@@ -162,6 +189,8 @@ export function usePrayerTimes(): PrayerTimesState {
 
       setPrayers(builtPrayers);
       setHijriDate(hijri);
+      setHijriMonth(hMonth);
+      setHijriDay(hDay);
       setGregorianDate(gregorian);
     } catch (e) {
       setError('Could not load prayer times. Check your connection.');
@@ -201,6 +230,8 @@ export function usePrayerTimes(): PrayerTimesState {
     loading,
     error,
     hijriDate,
+    hijriMonth,
+    hijriDay,
     gregorianDate,
     refresh: () => setRefreshKey((k) => k + 1),
     togglePrayer,

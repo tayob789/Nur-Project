@@ -23,7 +23,8 @@ import { VERSES_OF_THE_DAY } from '@/data/verses';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useQuranGoal } from '@/hooks/useQuranGoal';
 import { useStreak } from '@/hooks/useStreak';
-import { getRamadanInfo, getIslamicGreeting } from '@/utils/greeting';
+import { getIslamicGreeting } from '@/utils/greeting';
+import { getSeasonalBanner } from '@/utils/hijriSeasonal';
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const TODAY_IDX = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
@@ -35,14 +36,15 @@ const dayOfYear = () => {
 };
 const todayVerse = VERSES_OF_THE_DAY[dayOfYear() % VERSES_OF_THE_DAY.length];
 const todayHadith = HADITH_OF_THE_DAY[dayOfYear() % HADITH_OF_THE_DAY.length];
-const ramadan = getRamadanInfo();
 const islamicGreeting = getIslamicGreeting();
 
 const GREETING_KEY = 'nur_last_greeting_date';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { prayers, nextPrayer, nextPrayerIndex, loading, togglePrayer, hijriDate } = usePrayers();
+  const { prayers, nextPrayer, nextPrayerIndex, loading, togglePrayer, hijriDate, hijriMonth, hijriDay } =
+    usePrayers();
+  const seasonalBanner = getSeasonalBanner(hijriMonth, hijriDay);
   const { pagesRead, weeklyGoal, progress: quranProgress } = useQuranGoal();
   const { streakCount, weekDays } = useStreak();
   const { text: countdown, isUrgent } = useCountdown(nextPrayer?.time ?? null);
@@ -109,18 +111,11 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Ramadan Card */}
-          {ramadan.inRamadan ? (
-            <LinearGradient colors={['#1a0e05', '#1c1108', '#141008']} style={s.ramadanCard}>
-              <Text style={s.ramadanEyebrow}>RAMADAN MUBARAK</Text>
-              <Text style={s.ramadanDay}>Day {ramadan.dayOf}</Text>
-              <Text style={s.ramadanSub}>May Allah accept your fasts and prayers</Text>
-            </LinearGradient>
-          ) : ramadan.daysUntil <= 30 ? (
-            <LinearGradient colors={['#1a0e05', '#1c1108', '#141008']} style={s.ramadanCard}>
-              <Text style={s.ramadanEyebrow}>COMING SOON</Text>
-              <Text style={s.ramadanDay}>Ramadan in {ramadan.daysUntil} days</Text>
-              <Text style={s.ramadanSub}>Begin your preparation now</Text>
+          {seasonalBanner ? (
+            <LinearGradient colors={theme.gradients.seasonalBanner} style={s.ramadanCard}>
+              <Text style={s.ramadanEyebrow}>{seasonalBanner.eyebrow}</Text>
+              <Text style={s.ramadanDay}>{seasonalBanner.title}</Text>
+              <Text style={s.ramadanSub}>{seasonalBanner.subtitle}</Text>
             </LinearGradient>
           ) : null}
 
@@ -238,7 +233,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
     zIndex: 99,
-    backgroundColor: 'rgba(12,11,9,0.88)',
+    backgroundColor: theme.colors.overlayScrim,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
@@ -246,7 +241,7 @@ const s = StyleSheet.create({
   fullGreetingText: {
     fontFamily: 'Amiri_400Regular',
     fontSize: 26,
-    color: '#D4A017',
+    color: theme.colors.goldAccent,
     textAlign: 'center',
     writingDirection: 'rtl',
     lineHeight: 46,
@@ -258,7 +253,7 @@ const s = StyleSheet.create({
   shortGreeting: {
     fontFamily: 'Amiri_400Regular',
     fontSize: 18,
-    color: '#D4A017',
+    color: theme.colors.goldAccent,
     writingDirection: 'rtl',
     textAlign: 'left',
     marginBottom: 4,
@@ -266,12 +261,12 @@ const s = StyleSheet.create({
   },
   name: { fontSize: 26, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
   subdate: { fontSize: 12, color: theme.colors.text2 },
-  ramadanCard: { borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)', alignItems: 'center' },
+  ramadanCard: { borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: theme.colors.goldBorder25, alignItems: 'center' },
   ramadanEyebrow: { fontSize: 9, letterSpacing: 2.5, color: theme.colors.gold, fontWeight: '700', marginBottom: 6, opacity: 0.8 },
   ramadanDay: { fontSize: 20, fontWeight: '800', color: theme.colors.goldLight, marginBottom: 4 },
   ramadanSub: { fontSize: 12, color: theme.colors.text2, fontStyle: 'italic' },
 
-  nextCard: { borderRadius: 20, padding: 20, marginBottom: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)' },
+  nextCard: { borderRadius: 20, padding: 20, marginBottom: 14, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.goldBorder25 },
   nextGlow: { position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: theme.colors.goldDim },
   nextTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   nextLabel: { fontSize: 9, letterSpacing: 2, color: theme.colors.gold, marginBottom: 4, fontWeight: '600' },
@@ -280,15 +275,15 @@ const s = StyleSheet.create({
   nextRight: { alignItems: 'flex-end' },
   countdown: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 8, fontVariant: ['tabular-nums'] },
   countdownUrgent: { color: theme.colors.gold },
-  prepareBadge: { backgroundColor: theme.colors.goldDim, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(201,168,76,0.3)' },
+  prepareBadge: { backgroundColor: theme.colors.goldDim, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: theme.colors.goldBorder30 },
   prepareTxt: { fontSize: 10, color: theme.colors.gold, fontWeight: '600' },
   loadingCard: { alignItems: 'center', justifyContent: 'center', height: 80 },
   loadingText: { color: theme.colors.text2, fontSize: 14 },
 
   strip: { marginBottom: 14 },
   pill: { backgroundColor: theme.colors.surface2, borderRadius: 12, padding: 10, marginRight: 8, minWidth: 68, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center' },
-  pillDone: { backgroundColor: theme.colors.tealDim, borderColor: 'rgba(61,140,124,0.4)' },
-  pillNext: { backgroundColor: theme.colors.goldDim, borderColor: 'rgba(201,168,76,0.4)' },
+  pillDone: { backgroundColor: theme.colors.tealDim, borderColor: theme.colors.tealBorder40 },
+  pillNext: { backgroundColor: theme.colors.goldDim, borderColor: theme.colors.goldBorder40 },
   pillName: { fontSize: 11, fontWeight: '600', color: theme.colors.text2, marginBottom: 2 },
   pillNameDone: { color: theme.colors.tealLight },
   pillNameNext: { color: theme.colors.gold },
@@ -315,12 +310,12 @@ const s = StyleSheet.create({
   dayLabel: { fontSize: 9, color: theme.colors.text3, fontWeight: '600' },
 
   verseCard: {
-    backgroundColor: '#1a1608',
+    backgroundColor: theme.colors.verseCardBg,
     borderRadius: 20,
     padding: 24,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.2)',
+    borderColor: theme.colors.goldBorder20,
     alignItems: 'center',
     overflow: 'hidden',
   },
@@ -334,7 +329,7 @@ const s = StyleSheet.create({
   verseEyebrow: { fontSize: 10, color: theme.colors.gold, letterSpacing: 2, fontWeight: '700', marginBottom: 18, opacity: 0.8 },
   verseArabic: {
     fontSize: 28,
-    color: '#e8c97a',
+    color: theme.colors.goldLight,
     textAlign: 'center',
     writingDirection: 'rtl',
     lineHeight: 50,

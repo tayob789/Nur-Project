@@ -76,7 +76,7 @@ const f = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: theme.colors.text },
   hint: { fontSize: 10, color: theme.colors.text3 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface2, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 12, height: 46 },
-  inputFocused: { borderColor: 'rgba(201,168,76,0.5)' },
+  inputFocused: { borderColor: theme.colors.goldBorder50 },
   prefix: { fontSize: 15, color: theme.colors.text2, marginRight: 6 },
   input: { flex: 1, fontSize: 15, color: theme.colors.text },
 });
@@ -110,7 +110,7 @@ export default function ZakatScreen() {
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: bottomPad + 80 }]} keyboardShouldPersistTaps="handled">
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Result */}
-          <LinearGradient colors={aboveNisab ? theme.gradients.quranHero : theme.gradients.nextPrayer} style={[s.resultCard, aboveNisab && { borderColor: 'rgba(201,168,76,0.3)' }]}>
+          <LinearGradient colors={aboveNisab ? theme.gradients.quranHero : theme.gradients.nextPrayer} style={[s.resultCard, aboveNisab && { borderColor: theme.colors.goldBorder30 }]}>
             <View style={s.resultRow}>
               <View>
                 <Text style={s.resultLabel}>Zakat Due</Text>
@@ -191,7 +191,7 @@ const s = StyleSheet.create({
   resultLabel: { fontSize: 11, color: theme.colors.text2, marginBottom: 4 },
   resultAmount: { fontSize: 34, fontWeight: '800' },
   nisabBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1 },
-  nisabAbove: { backgroundColor: theme.colors.goldDim, borderColor: 'rgba(201,168,76,0.3)' },
+  nisabAbove: { backgroundColor: theme.colors.goldDim, borderColor: theme.colors.goldBorder30 },
   nisabBelow: { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border },
   nisabTxt: { fontSize: 11, fontWeight: '600' },
   netRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
@@ -199,7 +199,7 @@ const s = StyleSheet.create({
   netVal: { fontSize: 12, color: theme.colors.text, fontWeight: '600' },
   fieldsCard: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.border },
   divider: { height: 1, backgroundColor: theme.colors.border, marginVertical: 10 },
-  saveBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: theme.colors.goldDim, borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(201,168,76,0.3)', justifyContent: 'center' },
+  saveBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: theme.colors.goldDim, borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: theme.colors.goldBorder30, justifyContent: 'center' },
   saveTxt: { fontSize: 14, color: theme.colors.gold, fontWeight: '700' },
   charityCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: theme.colors.border },
   charityTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
@@ -212,6 +212,6 @@ const s = StyleSheet.create({
   historyRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   historyDate: { fontSize: 13, color: theme.colors.text2 },
   historyAmount: { fontSize: 13, color: theme.colors.gold, fontWeight: '700' },
-  disclaimer: { flexDirection: 'row', gap: 10, backgroundColor: theme.colors.tealDim, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(61,140,124,0.3)', alignItems: 'flex-start', marginBottom: 16 },
+  disclaimer: { flexDirection: 'row', gap: 10, backgroundColor: theme.colors.tealDim, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: theme.colors.tealBorder30, alignItems: 'flex-start', marginBottom: 16 },
   disclaimerTxt: { flex: 1, fontSize: 12, color: theme.colors.tealLight, lineHeight: 18 },
 });

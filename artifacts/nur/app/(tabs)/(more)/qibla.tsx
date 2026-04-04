@@ -115,7 +115,7 @@ export default function QiblaScreen() {
                   const angle = i * 90 * Math.PI / 180;
                   const tx = cx + (r - 8) * Math.sin(angle);
                   const ty = cy - (r - 8) * Math.cos(angle);
-                  return <SvgText key={dir} x={tx} y={ty + 4} fontSize="12" fill={dir === 'N' ? '#4a9' : theme.colors.text3} textAnchor="middle" fontWeight="700">{dir}</SvgText>;
+                  return <SvgText key={dir} x={tx} y={ty + 4} fontSize="12" fill={dir === 'N' ? theme.colors.compassNorth : theme.colors.text3} textAnchor="middle" fontWeight="700">{dir}</SvgText>;
                 })}
                 {Array.from({ length: 36 }).map((_, i) => {
                   const angle = (i * 10) * Math.PI / 180;
@@ -170,7 +170,7 @@ const s = StyleSheet.create({
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   subtitle: { fontSize: 12, color: theme.colors.text2, marginBottom: 28, textAlign: 'center' },
   loadTxt: { color: theme.colors.text2, fontSize: 16 },
-  errTxt: { color: '#c08090', fontSize: 14, textAlign: 'center' },
+  errTxt: { color: theme.colors.errorSoft, fontSize: 14, textAlign: 'center' },
   compassContainer: { position: 'relative', width: 260, height: 260, marginBottom: 24 },
   needleContainer: { position: 'absolute', top: 0, left: 0, width: 260, height: 260 },
   infoCard: { flexDirection: 'row', backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: theme.colors.border, marginBottom: 16, width: '100%', justifyContent: 'space-around' },
@@ -178,6 +178,6 @@ const s = StyleSheet.create({
   infoLabel: { fontSize: 10, color: theme.colors.text2, marginBottom: 4 },
   infoValue: { fontSize: 22, fontWeight: '800', color: theme.colors.gold },
   infoDivider: { width: 1, backgroundColor: theme.colors.border },
-  tipBox: { flexDirection: 'row', gap: 8, backgroundColor: theme.colors.tealDim, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(61,140,124,0.3)', alignItems: 'flex-start', width: '100%' },
+  tipBox: { flexDirection: 'row', gap: 8, backgroundColor: theme.colors.tealDim, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: theme.colors.tealBorder30, alignItems: 'flex-start', width: '100%' },
   tipTxt: { flex: 1, fontSize: 12, color: theme.colors.tealLight, lineHeight: 18 },
 });

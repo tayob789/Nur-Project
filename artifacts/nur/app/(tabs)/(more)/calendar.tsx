@@ -106,7 +106,7 @@ export default function CalendarScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.bg },
   content: { paddingHorizontal: 16, paddingTop: 16 },
-  hijriBar: { backgroundColor: theme.colors.goldDim, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(201,168,76,0.2)', alignSelf: 'flex-start' },
+  hijriBar: { backgroundColor: theme.colors.goldDim, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.goldBorder20, alignSelf: 'flex-start' },
   hijriTxt: { fontSize: 12, color: theme.colors.gold, fontWeight: '700' },
   monthNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   navBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border },

@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Platform,
   ScrollView,
@@ -14,9 +15,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GeometricBackground } from '@/components/GeometricBackground';
 import { theme } from '@/constants/colors';
+import {
+  ASR_METHOD_LABELS,
+  CALC_METHOD_API_VALUES,
+  CALC_METHOD_LABELS,
+  STORAGE_NUR_ASR_METHOD,
+  STORAGE_NUR_CALC_METHOD,
+  calcMethodIndexFromApi,
+} from '@/constants/prayerSettings';
+import { usePrayers } from '@/context/PrayerContext';
 
-const CALC_METHODS = ['Muslim World League', 'ISNA', 'Egypt', 'Makkah', 'Karachi'];
-const ASR_METHODS = ["Shafi'i / Maliki / Hanbali", 'Hanafi'];
 const PAGE_GOALS = [7, 14, 21, 35, 70];
 
 function SectionHeader({ title }: { title: string }) {
@@ -54,9 +62,11 @@ function ToggleRow({ label, value, onToggle, subtitle }: { label: string; value:
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { refresh } = usePrayers();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
-  const [calcMethod, setCalcMethod] = useState(0);
+  /** Default index 1 = ISNA (Aladhan method 2). */
+  const [calcMethod, setCalcMethod] = useState(1);
   const [asrMethod, setAsrMethod] = useState(0);
   const [pageGoal, setPageGoal] = useState(2);
   const [notifFajr, setNotifFajr] = useState(true);
@@ -66,6 +76,45 @@ export default function SettingsScreen() {
   const [notifIsha, setNotifIsha] = useState(true);
   const [morningReminder, setMorningReminder] = useState(true);
   const [eveningReminder, setEveningReminder] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [mRaw, sRaw] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_NUR_CALC_METHOD),
+          AsyncStorage.getItem(STORAGE_NUR_ASR_METHOD),
+        ]);
+        if (mRaw != null && mRaw !== '') {
+          const api = parseInt(mRaw, 10);
+          if (!Number.isNaN(api)) setCalcMethod(calcMethodIndexFromApi(api));
+        }
+        if (sRaw != null && sRaw !== '') {
+          const s = parseInt(sRaw, 10);
+          if (s === 1) setAsrMethod(1);
+          else if (s === 0) setAsrMethod(0);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const cycleCalcMethod = async () => {
+    const next = (calcMethod + 1) % CALC_METHOD_LABELS.length;
+    const apiValue = CALC_METHOD_API_VALUES[next];
+    try {
+      await AsyncStorage.setItem(STORAGE_NUR_CALC_METHOD, String(apiValue));
+    } catch {}
+    setCalcMethod(next);
+    refresh();
+  };
+
+  const cycleAsrMethod = async () => {
+    const next = (asrMethod + 1) % ASR_METHOD_LABELS.length;
+    try {
+      await AsyncStorage.setItem(STORAGE_NUR_ASR_METHOD, String(next));
+    } catch {}
+    setAsrMethod(next);
+    refresh();
+  };
 
   return (
     <View style={s.root}>
@@ -80,14 +129,14 @@ export default function SettingsScreen() {
         <View style={s.card}>
           <SettingRow
             label="Calculation Method"
-            value={CALC_METHODS[calcMethod]}
-            onPress={() => setCalcMethod((calcMethod + 1) % CALC_METHODS.length)}
+            value={CALC_METHOD_LABELS[calcMethod]}
+            onPress={() => void cycleCalcMethod()}
           />
           <View style={s.divider} />
           <SettingRow
             label="Asr Method"
-            value={ASR_METHODS[asrMethod]}
-            onPress={() => setAsrMethod((asrMethod + 1) % ASR_METHODS.length)}
+            value={ASR_METHOD_LABELS[asrMethod]}
+            onPress={() => void cycleAsrMethod()}
           />
           <View style={s.divider} />
           <SettingRow
@@ -168,8 +217,8 @@ const s = StyleSheet.create({
   settingValue: { fontSize: 14, color: theme.colors.text2, marginRight: 6 },
   settingRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  stepBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: theme.colors.goldDim, borderWidth: 1, borderColor: 'rgba(201,168,76,0.3)', justifyContent: 'center', alignItems: 'center' },
+  stepBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: theme.colors.goldDim, borderWidth: 1, borderColor: theme.colors.goldBorder30, justifyContent: 'center', alignItems: 'center' },
   stepValue: { fontSize: 14, color: theme.colors.gold, fontWeight: '700', minWidth: 70, textAlign: 'center' },
-  privacyCard: { backgroundColor: 'rgba(201,168,76,0.06)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(201,168,76,0.3)', padding: 20, alignItems: 'center', marginBottom: 4 },
+  privacyCard: { backgroundColor: theme.colors.goldBorder06, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.goldBorder30, padding: 20, alignItems: 'center', marginBottom: 4 },
   privacyText: { fontSize: 14, color: theme.colors.text, lineHeight: 22, textAlign: 'center', fontStyle: 'italic' },
 });

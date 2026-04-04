@@ -183,7 +183,7 @@ const s = StyleSheet.create({
   header: { marginBottom: 20 },
   eyebrow: { fontSize: 10, letterSpacing: 2, color: theme.colors.gold, fontWeight: '600', marginBottom: 6 },
   title: { fontSize: 26, fontWeight: '700', color: theme.colors.text },
-  heroCard: { borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(201,168,76,0.2)' },
+  heroCard: { borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: theme.colors.goldBorder20 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginBottom: 18 },
   stat: { alignItems: 'center' },
   statNum: { fontSize: 26, fontWeight: '800', color: theme.colors.gold, marginBottom: 4 },
@@ -213,7 +213,7 @@ const s = StyleSheet.create({
   mCard: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center' },
   mNum: { fontSize: 20, fontWeight: '800', color: theme.colors.gold, marginBottom: 4 },
   mLbl: { fontSize: 9, color: theme.colors.text3, textAlign: 'center', fontWeight: '500' },
-  tipCard: { backgroundColor: theme.colors.goldDim, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: 'rgba(201,168,76,0.2)' },
+  tipCard: { backgroundColor: theme.colors.goldDim, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: theme.colors.goldBorder20 },
   tipText: { fontSize: 13, color: theme.colors.goldLight, fontStyle: 'italic', lineHeight: 20, marginBottom: 6 },
   tipSource: { fontSize: 11, color: theme.colors.gold, fontWeight: '600' },
 });

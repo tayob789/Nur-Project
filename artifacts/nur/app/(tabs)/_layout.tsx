@@ -47,7 +47,7 @@ function ClassicTabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          backgroundColor: isIOS ? 'transparent' : 'rgba(20,18,16,0.97)',
+          backgroundColor: isIOS ? 'transparent' : theme.colors.tabBarFill,
           borderTopWidth: 1,
           borderTopColor: theme.colors.border,
           elevation: 0,
@@ -57,7 +57,7 @@ function ClassicTabLayout() {
           isIOS ? (
             <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,18,16,0.97)' }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.tabBarFill }]} />
           ),
         tabBarLabelStyle: {
           fontSize: 9,

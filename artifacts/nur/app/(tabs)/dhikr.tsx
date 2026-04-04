@@ -70,7 +70,7 @@ export default function DhikrScreen() {
 
   const borderColor = flashAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['rgba(201,168,76,0.2)', 'rgba(201,168,76,0.8)'],
+    outputRange: [theme.colors.goldBorder20, theme.colors.goldBorder80],
   });
 
   return (
@@ -189,7 +189,7 @@ const s = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: theme.colors.text },
   selectorRow: { marginBottom: 20 },
   selectorPill: { backgroundColor: theme.colors.surface2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: theme.colors.border },
-  selectorActive: { backgroundColor: theme.colors.goldDim, borderColor: 'rgba(201,168,76,0.5)' },
+  selectorActive: { backgroundColor: theme.colors.goldDim, borderColor: theme.colors.goldBorder50 },
   selectorTxt: { fontSize: 12, color: theme.colors.text2, fontWeight: '600' },
   selectorTxtActive: { color: theme.colors.gold },
   counterCard: { backgroundColor: theme.colors.surface, borderRadius: 24, padding: 32, marginBottom: 16, borderWidth: 1.5, alignItems: 'center' },
@@ -216,7 +216,7 @@ const s = StyleSheet.create({
   collectionName: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
   collectionCount: { fontSize: 11, color: theme.colors.text3 },
   chevronRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  startBtn: { backgroundColor: theme.colors.goldDim, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(201,168,76,0.3)' },
+  startBtn: { backgroundColor: theme.colors.goldDim, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: theme.colors.goldBorder30 },
   startTxt: { fontSize: 11, color: theme.colors.gold, fontWeight: '700' },
   dhikrItem: { backgroundColor: theme.colors.surface2, borderRadius: 12, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: theme.colors.border },
   dhikrArabic: { fontSize: 18, color: theme.colors.goldLight, textAlign: 'right', writingDirection: 'rtl', marginBottom: 8, lineHeight: 28 },
