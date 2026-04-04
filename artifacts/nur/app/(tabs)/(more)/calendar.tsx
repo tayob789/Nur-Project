@@ -4,8 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GeometricBackground } from '@/components/GeometricBackground';
 import { theme } from '@/constants/colors';
+import { usePrayers } from '@/context/PrayerContext';
 import { ISLAMIC_EVENTS } from '@/data/islamicEvents';
-import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
@@ -22,7 +22,7 @@ export default function CalendarScreen() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const { hijriDate } = usePrayerTimes();
+  const { hijriDate } = usePrayers();
 
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
