@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { GeometricBackground } from '@/components/GeometricBackground';
 import { PrayerTimeline } from '@/components/PrayerTimeline';
@@ -42,6 +43,7 @@ const GREETING_KEY = 'nur_last_greeting_date';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { prayers, nextPrayer, nextPrayerIndex, loading, togglePrayer, hijriDate, hijriMonth, hijriDay } =
     usePrayers();
   const seasonalBanner = getSeasonalBanner(hijriMonth, hijriDay);
@@ -76,6 +78,13 @@ export default function HomeScreen() {
 
   const prayersDone = prayers.filter((p) => p.done).length;
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+
+  const quickActions = [
+    { label: 'Dhikr', icon: 'fingerprint', route: '/dhikr' as const, color: theme.colors.tealLight },
+    { label: 'Qibla', icon: 'compass-outline', route: '/qibla' as const, color: theme.colors.gold },
+    { label: '99 Names', icon: 'star-outline', route: '/names' as const, color: theme.colors.amber },
+    { label: 'Calendar', icon: 'calendar-month-outline', route: '/calendar' as const, color: theme.colors.text2 },
+  ];
 
   return (
     <View style={s.root}>
@@ -143,6 +152,23 @@ export default function HomeScreen() {
               <Text style={s.loadingText}>Loading prayer times…</Text>
             </LinearGradient>
           )}
+
+          {/* Quick Access Buttons */}
+          <View style={s.quickActionsRow}>
+            {quickActions.map((action, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={s.actionBtn}
+                activeOpacity={0.7}
+                onPress={() => router.push(action.route)}
+              >
+                <View style={[s.actionIconCircle, { borderColor: action.color + '40' }]}>
+                  <MaterialCommunityIcons name={action.icon as any} size={22} color={action.color} />
+                </View>
+                <Text style={s.actionLabel}>{action.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {/* Prayer Strip */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.strip}>
@@ -213,7 +239,7 @@ export default function HomeScreen() {
           {/* Hadith of the Day */}
           <View style={s.hadithCard}>
             <Text style={s.hadithEyebrow}>HADITH OF THE DAY</Text>
-            <Text style={s.hadithPrefix}>{`The Prophet \u262d said:`}</Text>
+            <Text style={s.hadithPrefix}>{`The Prophet \uFDFA said:`}</Text>
             <Text style={s.hadithText}>"{todayHadith.text}"</Text>
             <Text style={s.hadithSource}>{todayHadith.source} · {todayHadith.narrator}</Text>
           </View>
@@ -266,12 +292,12 @@ const s = StyleSheet.create({
   ramadanDay: { fontSize: 20, fontWeight: '800', color: theme.colors.goldLight, marginBottom: 4 },
   ramadanSub: { fontSize: 12, color: theme.colors.text2, fontStyle: 'italic' },
 
-  nextCard: { borderRadius: 20, padding: 20, marginBottom: 14, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.goldBorder25 },
+  nextCard: { borderRadius: 20, padding: 20, marginBottom: 18, overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.goldBorder25 },
   nextGlow: { position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: theme.colors.goldDim },
   nextTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   nextLabel: { fontSize: 9, letterSpacing: 2, color: theme.colors.gold, marginBottom: 4, fontWeight: '600' },
-  nextName: { fontSize: 26, fontWeight: '700', color: theme.colors.text, marginBottom: 2 },
-  nextTime: { fontSize: 15, color: theme.colors.text2 },
+  nextName: { fontSize: 24, fontWeight: '800', color: theme.colors.goldLight, marginBottom: 2 },
+  nextTime: { fontSize: 14, color: theme.colors.text2, fontWeight: '500' },
   nextRight: { alignItems: 'flex-end' },
   countdown: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 8, fontVariant: ['tabular-nums'] },
   countdownUrgent: { color: theme.colors.gold },
@@ -279,6 +305,11 @@ const s = StyleSheet.create({
   prepareTxt: { fontSize: 10, color: theme.colors.gold, fontWeight: '600' },
   loadingCard: { alignItems: 'center', justifyContent: 'center', height: 80 },
   loadingText: { color: theme.colors.text2, fontSize: 14 },
+
+  quickActionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, paddingHorizontal: 4 },
+  actionBtn: { alignItems: 'center', flex: 1 },
+  actionIconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: theme.colors.surface, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  actionLabel: { fontSize: 10, fontWeight: '600', color: theme.colors.text2 },
 
   strip: { marginBottom: 14 },
   pill: { backgroundColor: theme.colors.surface2, borderRadius: 12, padding: 10, marginRight: 8, minWidth: 68, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center' },

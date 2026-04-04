@@ -45,7 +45,6 @@ export default function PrayersScreen() {
   }, []);
 
   const done = prayers.filter((p) => p.done).length;
-  const ringPct = prayers.length > 0 ? done / prayers.length : 0;
   const ringColor = done === 5 ? theme.colors.teal : theme.colors.gold;
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
@@ -58,6 +57,38 @@ export default function PrayersScreen() {
     const pMins = h * 60 + m;
     return pMins < nowMins;
   }
+
+  function isPast(timeStr: string) {
+    const [h, m] = timeStr.split(':').map(Number);
+    const pMins = h * 60 + m;
+    return pMins < nowMins;
+  }
+
+  // Calculate progress between previous and next prayer
+  const getProgress = () => {
+    if (!nextPrayer || prayers.length === 0) return 0;
+    const nextIdx = prayers.findIndex(p => p.name === nextPrayer.name);
+    const prevIdx = nextIdx === 0 ? prayers.length - 1 : nextIdx - 1;
+    const prevPrayer = prayers[prevIdx];
+    
+    const [nh, nm] = nextPrayer.time.split(':').map(Number);
+    const [ph, pm] = prevPrayer.time.split(':').map(Number);
+    
+    let nTotal = nh * 60 + nm;
+    let pTotal = ph * 60 + pm;
+    let cTotal = now.getHours() * 60 + now.getMinutes();
+    
+    if (nTotal < pTotal) { // Over midnight (Isha to Fajr)
+        if (cTotal < nTotal) cTotal += 24 * 60;
+        nTotal += 24 * 60;
+    }
+    
+    const totalDiff = nTotal - pTotal;
+    const elapsed = cTotal - pTotal;
+    return Math.max(0, Math.min(1, elapsed / totalDiff));
+  };
+
+  const progress = getProgress();
 
   return (
     <View style={s.root}>
@@ -81,7 +112,14 @@ export default function PrayersScreen() {
             </View>
             <View style={s.summaryText}>
               <Text style={s.summaryMsg}>{MESSAGES[done]}</Text>
-              {done < 5 && <Text style={s.summaryRemain}>{5 - done} remaining today</Text>}
+              <View style={s.progressContainer}>
+                <View style={s.progressBarBg}>
+                  <View style={[s.progressBarFill, { width: `${progress * 100}%` }]} />
+                </View>
+                <Text style={s.progressLabel}>
+                  {nextPrayer ? `Time to ${nextPrayer.name}` : 'Day complete'}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -91,6 +129,8 @@ export default function PrayersScreen() {
           {prayers.map((prayer, i) => {
             const isNext = nextPrayer?.name === prayer.name && !prayer.done;
             const missed = isMissed(prayer.time, prayer.done);
+            const past = isPast(prayer.time) && !isNext;
+            
             return (
               <TouchableOpacity
                 key={prayer.name}
@@ -101,21 +141,22 @@ export default function PrayersScreen() {
                   prayer.done && s.rowDone,
                   isNext && s.rowNext,
                   missed && s.rowMissed,
+                  past && !prayer.done && s.rowPast,
                 ]}
               >
                 <View style={[s.leftBar, {
                   backgroundColor: prayer.done ? theme.colors.teal : isNext ? theme.colors.gold : missed ? theme.colors.amber : 'transparent'
                 }]} />
-                <View style={[s.cb, prayer.done && s.cbDone, missed && !prayer.done && s.cbMissed]}>
+                <View style={[s.cb, prayer.done && s.cbDone, missed && !prayer.done && s.cbMissed, past && !prayer.done && s.cbPast]}>
                   {prayer.done && <Feather name="check" size={13} color={theme.colors.bg} />}
                   {missed && !prayer.done && <Feather name="clock" size={11} color={theme.colors.amber} />}
                 </View>
                 <View style={s.prayerInfo}>
                   <View style={s.nameRow}>
-                    <Text style={[s.pName, prayer.done && s.pNameDone, isNext && s.pNameNext]}>{prayer.name}</Text>
+                    <Text style={[s.pName, prayer.done && s.pNameDone, isNext && s.pNameNext, past && !prayer.done && s.pNamePast]}>{prayer.name}</Text>
                     <Text style={s.pArabic}>{prayer.arabic}</Text>
                   </View>
-                  <Text style={s.pTime}>{prayer.time}</Text>
+                  <Text style={[s.pTime, past && !prayer.done && s.pTimePast]}>{prayer.time}</Text>
                 </View>
                 {isNext && <View style={s.nextBadge}><Text style={s.nextBadgeTxt}>Next</Text></View>}
                 {missed && !prayer.done && <View style={s.missedBadge}><Text style={s.missedBadgeTxt}>Missed</Text></View>}
@@ -159,27 +200,34 @@ const s = StyleSheet.create({
   ringNum: { fontSize: 22, fontWeight: '800' },
   ringOf: { fontSize: 10, color: theme.colors.text3, fontWeight: '500' },
   summaryText: { flex: 1 },
-  summaryMsg: { fontSize: 14, fontWeight: '600', color: theme.colors.text, lineHeight: 20, marginBottom: 4 },
-  summaryRemain: { fontSize: 12, color: theme.colors.text2 },
+  summaryMsg: { fontSize: 14, fontWeight: '600', color: theme.colors.text, lineHeight: 20, marginBottom: 8 },
+  progressContainer: { marginTop: 4 },
+  progressBarBg: { height: 4, backgroundColor: theme.colors.border2, borderRadius: 2, overflow: 'hidden', marginBottom: 6 },
+  progressBarFill: { height: '100%', backgroundColor: theme.colors.gold, borderRadius: 2 },
+  progressLabel: { fontSize: 10, color: theme.colors.text3, fontWeight: '500' },
   loadBox: { padding: 20, alignItems: 'center' },
   loadTxt: { color: theme.colors.text2 },
   errBox: { backgroundColor: theme.colors.errorBg15, borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: theme.colors.errorBorder30 },
   errTxt: { color: theme.colors.errorSoft, fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 14, marginBottom: 10, paddingRight: 14, paddingVertical: 16, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden', gap: 12 },
   rowDone: { backgroundColor: theme.colors.tealDim, borderColor: theme.colors.tealBorder30 },
-  rowNext: { borderColor: theme.colors.goldBorder40, backgroundColor: theme.colors.goldDim },
+  rowNext: { borderColor: theme.colors.goldBorder40, backgroundColor: theme.colors.goldDim, transform: [{ scale: 1.02 }] },
   rowMissed: { borderColor: theme.colors.amberBorder30, backgroundColor: theme.colors.amberDim },
+  rowPast: { opacity: 0.5 },
   leftBar: { width: 3, height: '100%', position: 'absolute', left: 0, top: 0 },
   cb: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border2, justifyContent: 'center', alignItems: 'center', marginLeft: 14 },
   cbDone: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
   cbMissed: { borderColor: theme.colors.amber },
+  cbPast: { borderColor: theme.colors.text3 },
   prayerInfo: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   pName: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
   pNameDone: { color: theme.colors.tealLight },
   pNameNext: { color: theme.colors.gold },
+  pNamePast: { color: theme.colors.text3 },
   pArabic: { fontSize: 13, color: theme.colors.text3 },
   pTime: { fontSize: 12, color: theme.colors.text2 },
+  pTimePast: { color: theme.colors.text3 },
   nextBadge: { backgroundColor: theme.colors.goldDim, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: theme.colors.goldBorder40 },
   nextBadgeTxt: { fontSize: 10, color: theme.colors.gold, fontWeight: '700' },
   missedBadge: { backgroundColor: theme.colors.amberDim, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: theme.colors.amberBorder30 },

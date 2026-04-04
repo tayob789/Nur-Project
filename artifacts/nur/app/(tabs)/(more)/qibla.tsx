@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { Magnetometer } from 'expo-sensors';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -42,11 +43,15 @@ export default function QiblaScreen() {
   const insets = useSafeAreaInsets();
   const [qiblaAngle, setQiblaAngle] = useState<number | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+  const [heading, setHeading] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+  
+  const headingAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let subscription: any = null;
+
     (async () => {
       try {
         let lat = 51.5074, lng = -0.1278;
@@ -57,6 +62,22 @@ export default function QiblaScreen() {
             lat = loc.coords.latitude;
             lng = loc.coords.longitude;
           }
+
+          // Setup Magnetometer
+          Magnetometer.setUpdateInterval(100);
+          subscription = Magnetometer.addListener(data => {
+            let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
+            angle = (angle + 360) % 360;
+            // The magnetometer gives angle relative to X axis, we want relative to North
+            // Adjusting for device orientation usually requires more complex math, 
+            // but simple atan2(y,x) is a good start for "flat" device.
+            setHeading(angle);
+            Animated.timing(headingAnim, {
+                toValue: angle,
+                duration: 100,
+                useNativeDriver: false,
+            }).start();
+          });
         } else {
           try {
             const pos = await new Promise<GeolocationPosition>((res, rej) =>
@@ -70,18 +91,16 @@ export default function QiblaScreen() {
         const dist = haversineDistance(lat, lng);
         setQiblaAngle(angle);
         setDistance(dist);
-        Animated.spring(rotateAnim, {
-          toValue: angle,
-          useNativeDriver: false,
-          tension: 30,
-          friction: 8,
-        }).start();
       } catch (e) {
         setError('Could not determine location.');
       } finally {
         setLoading(false);
       }
     })();
+
+    return () => {
+        if (subscription) subscription.remove();
+    };
   }, []);
 
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -90,9 +109,16 @@ export default function QiblaScreen() {
   const cy = size / 2;
   const r = size / 2 - 16;
 
-  const rotate = rotateAnim.interpolate({
+  // The compass face should rotate opposite to the heading to keep N at North
+  const compassRotate = headingAnim.interpolate({
     inputRange: [0, 360],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ['0deg', '-360deg'],
+  });
+
+  // The Qibla needle should point to (qiblaAngle - heading)
+  const needleRotate = headingAnim.interpolate({
+    inputRange: [0, 360],
+    outputRange: [`${qiblaAngle || 0}deg`, `${(qiblaAngle || 0) - 360}deg`],
   });
 
   return (
@@ -108,26 +134,29 @@ export default function QiblaScreen() {
         {qiblaAngle !== null && (
           <>
             <View style={s.compassContainer}>
-              <Svg width={size} height={size}>
-                <Circle cx={cx} cy={cy} r={r} fill={theme.colors.surface} stroke={theme.colors.border2} strokeWidth={1.5} />
-                <Circle cx={cx} cy={cy} r={r - 16} fill="none" stroke={theme.colors.border} strokeWidth={1} />
-                {['N', 'E', 'S', 'W'].map((dir, i) => {
-                  const angle = i * 90 * Math.PI / 180;
-                  const tx = cx + (r - 8) * Math.sin(angle);
-                  const ty = cy - (r - 8) * Math.cos(angle);
-                  return <SvgText key={dir} x={tx} y={ty + 4} fontSize="12" fill={dir === 'N' ? theme.colors.compassNorth : theme.colors.text3} textAnchor="middle" fontWeight="700">{dir}</SvgText>;
-                })}
-                {Array.from({ length: 36 }).map((_, i) => {
-                  const angle = (i * 10) * Math.PI / 180;
-                  const inner = r - (i % 9 === 0 ? 14 : i % 3 === 0 ? 10 : 7);
-                  const x1 = cx + inner * Math.sin(angle);
-                  const y1 = cy - inner * Math.cos(angle);
-                  const x2 = cx + (r - 2) * Math.sin(angle);
-                  const y2 = cy - (r - 2) * Math.cos(angle);
-                  return <Line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={theme.colors.border2} strokeWidth={0.8} />;
-                })}
-              </Svg>
-              <Animated.View style={[s.needleContainer, { transform: [{ rotate }] }]}>
+              <Animated.View style={{ transform: [{ rotate: compassRotate }] }}>
+                <Svg width={size} height={size}>
+                  <Circle cx={cx} cy={cy} r={r} fill={theme.colors.surface} stroke={theme.colors.border2} strokeWidth={1.5} />
+                  <Circle cx={cx} cy={cy} r={r - 16} fill="none" stroke={theme.colors.border} strokeWidth={1} />
+                  {['N', 'E', 'S', 'W'].map((dir, i) => {
+                    const angle = i * 90 * Math.PI / 180;
+                    const tx = cx + (r - 8) * Math.sin(angle);
+                    const ty = cy - (r - 8) * Math.cos(angle);
+                    return <SvgText key={dir} x={tx} y={ty + 4} fontSize="12" fill={dir === 'N' ? theme.colors.compassNorth : theme.colors.text3} textAnchor="middle" fontWeight="700">{dir}</SvgText>;
+                  })}
+                  {Array.from({ length: 36 }).map((_, i) => {
+                    const angle = (i * 10) * Math.PI / 180;
+                    const inner = r - (i % 9 === 0 ? 14 : i % 3 === 0 ? 10 : 7);
+                    const x1 = cx + inner * Math.sin(angle);
+                    const y1 = cy - inner * Math.cos(angle);
+                    const x2 = cx + (r - 2) * Math.sin(angle);
+                    const y2 = cy - (r - 2) * Math.cos(angle);
+                    return <Line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={theme.colors.border2} strokeWidth={0.8} />;
+                  })}
+                </Svg>
+              </Animated.View>
+              
+              <Animated.View style={[s.needleContainer, { transform: [{ rotate: needleRotate }] }]}>
                 <Svg width={size} height={size}>
                   <G>
                     <Path
@@ -140,6 +169,9 @@ export default function QiblaScreen() {
                   </G>
                 </Svg>
               </Animated.View>
+              
+              {/* Fixed indicator at top */}
+              <View style={s.fixedIndicator} />
             </View>
 
             <View style={s.infoCard}>
@@ -171,8 +203,9 @@ const s = StyleSheet.create({
   subtitle: { fontSize: 12, color: theme.colors.text2, marginBottom: 28, textAlign: 'center' },
   loadTxt: { color: theme.colors.text2, fontSize: 16 },
   errTxt: { color: theme.colors.errorSoft, fontSize: 14, textAlign: 'center' },
-  compassContainer: { position: 'relative', width: 260, height: 260, marginBottom: 24 },
+  compassContainer: { position: 'relative', width: 260, height: 260, marginBottom: 24, justifyContent: 'center', alignItems: 'center' },
   needleContainer: { position: 'absolute', top: 0, left: 0, width: 260, height: 260 },
+  fixedIndicator: { position: 'absolute', top: -10, width: 2, height: 20, backgroundColor: theme.colors.gold, borderRadius: 1 },
   infoCard: { flexDirection: 'row', backgroundColor: theme.colors.surface, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: theme.colors.border, marginBottom: 16, width: '100%', justifyContent: 'space-around' },
   infoItem: { alignItems: 'center' },
   infoLabel: { fontSize: 10, color: theme.colors.text2, marginBottom: 4 },

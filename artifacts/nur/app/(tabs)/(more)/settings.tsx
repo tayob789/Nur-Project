@@ -80,10 +80,19 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [mRaw, sRaw] = await Promise.all([
+        const [mRaw, sRaw, goalRaw, nf, nd, na, nm, ni, am, em] = await Promise.all([
           AsyncStorage.getItem(STORAGE_NUR_CALC_METHOD),
           AsyncStorage.getItem(STORAGE_NUR_ASR_METHOD),
+          AsyncStorage.getItem('nur_page_goal'),
+          AsyncStorage.getItem('nur_notif_fajr'),
+          AsyncStorage.getItem('nur_notif_dhuhr'),
+          AsyncStorage.getItem('nur_notif_asr'),
+          AsyncStorage.getItem('nur_notif_maghrib'),
+          AsyncStorage.getItem('nur_notif_isha'),
+          AsyncStorage.getItem('nur_notif_morning'),
+          AsyncStorage.getItem('nur_notif_evening'),
         ]);
+        
         if (mRaw != null && mRaw !== '') {
           const api = parseInt(mRaw, 10);
           if (!Number.isNaN(api)) setCalcMethod(calcMethodIndexFromApi(api));
@@ -93,27 +102,42 @@ export default function SettingsScreen() {
           if (s === 1) setAsrMethod(1);
           else if (s === 0) setAsrMethod(0);
         }
+        if (goalRaw != null) setPageGoal(parseInt(goalRaw, 10));
+        if (nf != null) setNotifFajr(nf === 'true');
+        if (nd != null) setNotifDhuhr(nd === 'true');
+        if (na != null) setNotifAsr(na === 'true');
+        if (nm != null) setNotifMaghrib(nm === 'true');
+        if (ni != null) setNotifIsha(ni === 'true');
+        if (am != null) setMorningReminder(am === 'true');
+        if (em != null) setEveningReminder(em === 'true');
       } catch {}
     })();
   }, []);
 
+  const saveSetting = async (key: string, val: string) => {
+    try {
+      await AsyncStorage.setItem(key, val);
+    } catch {}
+  };
+
   const cycleCalcMethod = async () => {
     const next = (calcMethod + 1) % CALC_METHOD_LABELS.length;
     const apiValue = CALC_METHOD_API_VALUES[next];
-    try {
-      await AsyncStorage.setItem(STORAGE_NUR_CALC_METHOD, String(apiValue));
-    } catch {}
+    await saveSetting(STORAGE_NUR_CALC_METHOD, String(apiValue));
     setCalcMethod(next);
     refresh();
   };
 
   const cycleAsrMethod = async () => {
     const next = (asrMethod + 1) % ASR_METHOD_LABELS.length;
-    try {
-      await AsyncStorage.setItem(STORAGE_NUR_ASR_METHOD, String(next));
-    } catch {}
+    await saveSetting(STORAGE_NUR_ASR_METHOD, String(next));
     setAsrMethod(next);
     refresh();
+  };
+
+  const updatePageGoal = (newIdx: number) => {
+    setPageGoal(newIdx);
+    saveSetting('nur_page_goal', String(newIdx));
   };
 
   return (
@@ -141,26 +165,26 @@ export default function SettingsScreen() {
           <View style={s.divider} />
           <SettingRow
             label="Location"
-            value="Auto (GPS)"
+            value="London, UK (Auto)"
             onPress={() => {}}
           />
         </View>
 
         <SectionHeader title="NOTIFICATIONS" />
         <View style={s.card}>
-          <ToggleRow label="Fajr" value={notifFajr} onToggle={setNotifFajr} />
+          <ToggleRow label="Fajr" value={notifFajr} onToggle={(v) => { setNotifFajr(v); saveSetting('nur_notif_fajr', String(v)); }} />
           <View style={s.divider} />
-          <ToggleRow label="Dhuhr" value={notifDhuhr} onToggle={setNotifDhuhr} />
+          <ToggleRow label="Dhuhr" value={notifDhuhr} onToggle={(v) => { setNotifDhuhr(v); saveSetting('nur_notif_dhuhr', String(v)); }} />
           <View style={s.divider} />
-          <ToggleRow label="Asr" value={notifAsr} onToggle={setNotifAsr} />
+          <ToggleRow label="Asr" value={notifAsr} onToggle={(v) => { setNotifAsr(v); saveSetting('nur_notif_asr', String(v)); }} />
           <View style={s.divider} />
-          <ToggleRow label="Maghrib" value={notifMaghrib} onToggle={setNotifMaghrib} />
+          <ToggleRow label="Maghrib" value={notifMaghrib} onToggle={(v) => { setNotifMaghrib(v); saveSetting('nur_notif_maghrib', String(v)); }} />
           <View style={s.divider} />
-          <ToggleRow label="Isha" value={notifIsha} onToggle={setNotifIsha} />
+          <ToggleRow label="Isha" value={notifIsha} onToggle={(v) => { setNotifIsha(v); saveSetting('nur_notif_isha', String(v)); }} />
           <View style={s.divider} />
-          <ToggleRow label="Morning Azkar Reminder" subtitle="After Fajr" value={morningReminder} onToggle={setMorningReminder} />
+          <ToggleRow label="Morning Azkar Reminder" subtitle="After Fajr" value={morningReminder} onToggle={(v) => { setMorningReminder(v); saveSetting('nur_notif_morning', String(v)); }} />
           <View style={s.divider} />
-          <ToggleRow label="Evening Azkar Reminder" subtitle="After Asr" value={eveningReminder} onToggle={setEveningReminder} />
+          <ToggleRow label="Evening Azkar Reminder" subtitle="After Asr" value={eveningReminder} onToggle={(v) => { setEveningReminder(v); saveSetting('nur_notif_evening', String(v)); }} />
         </View>
 
         <SectionHeader title="QURAN" />
@@ -170,7 +194,7 @@ export default function SettingsScreen() {
             <View style={s.stepperRow}>
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => setPageGoal(Math.max(0, pageGoal - 1))}
+                onPress={() => updatePageGoal(Math.max(0, pageGoal - 1))}
                 style={s.stepBtn}
               >
                 <Feather name="minus" size={14} color={theme.colors.gold} />
@@ -178,7 +202,7 @@ export default function SettingsScreen() {
               <Text style={s.stepValue}>{PAGE_GOALS[pageGoal]} pg/wk</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => setPageGoal(Math.min(PAGE_GOALS.length - 1, pageGoal + 1))}
+                onPress={() => updatePageGoal(Math.min(PAGE_GOALS.length - 1, pageGoal + 1))}
                 style={s.stepBtn}
               >
                 <Feather name="plus" size={14} color={theme.colors.gold} />
