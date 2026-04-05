@@ -24,6 +24,7 @@ import { VERSES_OF_THE_DAY } from '@/data/verses';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useQuranGoal } from '@/hooks/useQuranGoal';
 import { useStreak } from '@/hooks/useStreak';
+import { toLocalDateKey } from '@/utils/date';
 import { getIslamicGreeting } from '@/utils/greeting';
 import { getSeasonalBanner } from '@/utils/hijriSeasonal';
 
@@ -61,7 +62,7 @@ export default function HomeScreen() {
   }, []);
 
   async function checkFirstDailyOpen() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateKey();
     try {
       const stored = await AsyncStorage.getItem(GREETING_KEY);
       if (stored !== today) {

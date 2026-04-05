@@ -47,6 +47,10 @@ function parseTime(timeStr: string): Date {
   const [hours, minutes] = timeStr.split(':').map(Number);
   const now = new Date();
   const result = new Date(now);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    result.setHours(23, 59, 0, 0);
+    return result;
+  }
   result.setHours(hours, minutes, 0, 0);
   return result;
 }
@@ -160,13 +164,21 @@ export function usePrayerTimes(): PrayerTimesState {
         }
 
         const timestamp = Math.floor(Date.now() / 1000);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         const resp = await fetch(
-          `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${lat}&longitude=${lng}&method=${calcMethod}&school=${asrSchool}`
-        );
+          `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${lat}&longitude=${lng}&method=${calcMethod}&school=${asrSchool}`,
+          { signal: controller.signal },
+        ).finally(() => clearTimeout(timeoutId));
+        if (!resp.ok) throw new Error(`Prayer API responded with ${resp.status}`);
         const data = await resp.json();
-        timings = normalizeTimingsRecord(data.data.timings ?? {});
+        const payload = data?.data;
+        if (!payload?.timings || !payload?.date?.hijri || !payload?.date?.gregorian) {
+          throw new Error('Prayer API payload missing expected fields');
+        }
+        timings = normalizeTimingsRecord(payload.timings ?? {});
 
-        const dateObj = data.data.date;
+        const dateObj = payload.date;
         hijri = `${dateObj.hijri.day} ${dateObj.hijri.month.en} ${dateObj.hijri.year} AH`;
         gregorian = dateObj.gregorian.date;
         hMonth = parseInt(String(dateObj.hijri.month.number), 10);

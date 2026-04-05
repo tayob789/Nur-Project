@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
+import { daysBetweenLocalDateKeys, toLocalDateKey } from '@/utils/date';
+
 const STORAGE_KEY = 'nur_streak_data';
 
 interface StreakData {
@@ -10,7 +12,7 @@ interface StreakData {
 }
 
 function getTodayStr(): string {
-  return new Date().toISOString().split('T')[0];
+  return toLocalDateKey();
 }
 
 function getWeekDayIndex(): number {
@@ -21,6 +23,7 @@ function getWeekDayIndex(): number {
 export function useStreak() {
   const [streakCount, setStreakCount] = useState(0);
   const [weekDays, setWeekDays] = useState<boolean[]>([false, false, false, false, false, false, false]);
+  const [lastCompletedDate, setLastCompletedDate] = useState<string>('');
 
   const load = useCallback(async () => {
     try {
@@ -29,6 +32,7 @@ export function useStreak() {
         const data: StreakData = JSON.parse(stored);
         setStreakCount(data.streakCount);
         setWeekDays(data.weekDays || [false, false, false, false, false, false, false]);
+        setLastCompletedDate(data.lastCompletedDate || '');
       }
     } catch {}
   }, []);
@@ -38,17 +42,24 @@ export function useStreak() {
   const markTodayComplete = useCallback(async () => {
     const today = getTodayStr();
     const dayIdx = getWeekDayIndex();
-    setStreakCount((prev) => {
-      const newStreak = prev + 1;
-      setWeekDays((days) => {
-        const updated = [...days];
-        updated[dayIdx] = true;
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ streakCount: newStreak, lastCompletedDate: today, weekDays: updated }));
-        return updated;
-      });
-      return newStreak;
-    });
-  }, []);
+    const dayGap = lastCompletedDate ? daysBetweenLocalDateKeys(lastCompletedDate, today) : 1;
+
+    if (dayGap === 0) return;
+
+    const newStreak = dayGap === 1 ? streakCount + 1 : 1;
+    const updatedWeekDays = [...weekDays];
+    updatedWeekDays[dayIdx] = true;
+
+    setStreakCount(newStreak);
+    setWeekDays(updatedWeekDays);
+    setLastCompletedDate(today);
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ streakCount: newStreak, lastCompletedDate: today, weekDays: updatedWeekDays }),
+      );
+    } catch {}
+  }, [lastCompletedDate, streakCount, weekDays]);
 
   return { streakCount, weekDays, markTodayComplete };
 }

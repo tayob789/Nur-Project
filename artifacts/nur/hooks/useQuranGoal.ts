@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
+import { getMondayOfWeekLocal } from '@/utils/date';
+
 const STORAGE_KEY = 'nur_quran_data';
 
 interface QuranData {
@@ -10,11 +12,7 @@ interface QuranData {
 }
 
 function getWeekStart(): string {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d.setDate(diff));
-  return monday.toISOString().split('T')[0];
+  return getMondayOfWeekLocal();
 }
 
 export function useQuranGoal() {
@@ -36,6 +34,11 @@ export function useQuranGoal() {
           setWeeklyGoalState(data.weeklyGoal);
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ pagesRead: 0, weeklyGoal: data.weeklyGoal, weekStart: currentWeek }));
         }
+      } else {
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ pagesRead: 0, weeklyGoal: 20, weekStart: getWeekStart() }),
+        );
       }
     } catch {}
     setLoading(false);
