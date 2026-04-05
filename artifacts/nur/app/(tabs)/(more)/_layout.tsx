@@ -19,6 +19,8 @@ export default function MoreLayout() {
       <Stack.Screen name="zakat" options={{ title: 'Zakat Calculator' }} />
       <Stack.Screen name="mosque" options={{ title: 'Mosque Finder' }} />
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+      <Stack.Screen name="account" options={{ title: 'Account' }} />
+      <Stack.Screen name="premium" options={{ title: 'Premium' }} />
     </Stack>
   );
 }

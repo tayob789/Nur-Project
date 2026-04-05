@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GeometricBackground } from '@/components/GeometricBackground';
 import { theme } from '@/constants/colors';
 import { usePrayers } from '@/context/PrayerContext';
+import { useUser } from '@/context/UserContext';
 import { getRamadanInfo } from '@/utils/greeting';
 
 const ramadan = getRamadanInfo();
@@ -34,12 +35,21 @@ function FeatureCard({ icon, label, subtitle, color, onPress }: FeatureCardProps
 export default function MoreScreen() {
   const insets = useSafeAreaInsets();
   const { prayers } = usePrayers();
+  const { isPremium } = useUser();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start(); }, []);
 
   const fajr = prayers.find(p => p.name === 'Fajr');
   const maghrib = prayers.find(p => p.name === 'Maghrib');
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+
+  function goMosqueFinder() {
+    if (!isPremium) {
+      router.push('/(tabs)/(more)/premium');
+      return;
+    }
+    router.push('/(tabs)/(more)/mosque');
+  }
 
   return (
     <View style={s.root}>
@@ -61,8 +71,9 @@ export default function MoreScreen() {
             <FeatureCard icon="calendar" label="Calendar" subtitle="Islamic dates" color={theme.colors.teal} onPress={() => router.push('/(tabs)/(more)/calendar')} />
             <FeatureCard icon="star" label="99 Names" subtitle="Asma ul-Husna" color={theme.colors.goldLight} onPress={() => router.push('/(tabs)/(more)/names')} />
             <FeatureCard icon="percent" label="Zakat" subtitle="Calculate now" color={theme.colors.tealLight} onPress={() => router.push('/(tabs)/(more)/zakat')} />
-            <FeatureCard icon="map-pin" label="Mosques" subtitle="Near you" color={theme.colors.gold} onPress={() => router.push('/(tabs)/(more)/mosque')} />
+            <FeatureCard icon="map-pin" label="Mosques" subtitle={isPremium ? 'Near you' : 'Premium feature'} color={theme.colors.gold} onPress={goMosqueFinder} />
             <FeatureCard icon="settings" label="Settings" subtitle="Preferences" color={theme.colors.text2} onPress={() => router.push('/(tabs)/(more)/settings')} />
+            <FeatureCard icon="user" label="Account" subtitle="Login & sync" color={theme.colors.teal} onPress={() => router.push('/(tabs)/(more)/account')} />
           </View>
 
           {/* Ramadan Banner */}
