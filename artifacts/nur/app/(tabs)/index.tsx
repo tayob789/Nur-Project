@@ -24,6 +24,8 @@ import { VERSES_OF_THE_DAY } from '@/data/verses';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useQuranGoal } from '@/hooks/useQuranGoal';
 import { useStreak } from '@/hooks/useStreak';
+import { useUser } from '@/context/UserContext';
+import { toLocalDateKey } from '@/utils/date';
 import { getIslamicGreeting } from '@/utils/greeting';
 import { getSeasonalBanner } from '@/utils/hijriSeasonal';
 
@@ -49,6 +51,7 @@ export default function HomeScreen() {
   const seasonalBanner = getSeasonalBanner(hijriMonth, hijriDay);
   const { pagesRead, weeklyGoal, progress: quranProgress } = useQuranGoal();
   const { streakCount, weekDays } = useStreak();
+  const { name } = useUser();
   const { text: countdown, isUrgent } = useCountdown(nextPrayer?.time ?? null);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -61,7 +64,7 @@ export default function HomeScreen() {
   }, []);
 
   async function checkFirstDailyOpen() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateKey();
     try {
       const stored = await AsyncStorage.getItem(GREETING_KEY);
       if (stored !== today) {
@@ -112,7 +115,7 @@ export default function HomeScreen() {
           <View style={s.header}>
             <View style={s.headerLeft}>
               <Text style={s.shortGreeting}>{islamicGreeting.short}</Text>
-              <Text style={s.name}>Muhammad</Text>
+              <Text style={s.name}>{name || 'Friend'}</Text>
               <Text style={s.subdate}>
                 {new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })}
                 {hijriDate ? ` · ${hijriDate}` : ''}
